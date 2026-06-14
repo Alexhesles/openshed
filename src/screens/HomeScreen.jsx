@@ -8,7 +8,7 @@ import { Wrench, Hammer, Leaf, Zap, Droplets } from 'lucide-react'
 const CAT_ICONS  = { 'Power Tools':Hammer, 'Yard & Garden':Leaf, 'Cleaning':Droplets, 'Hand Tools':Wrench, 'Other':Zap }
 const CAT_COLORS = { 'Power Tools':'#FF9500', 'Yard & Garden':'#34C759', 'Cleaning':'#007AFF', 'Hand Tools':'#007AFF', 'Other':'#AF52DE' }
 
-export default function HomeScreen({ goHandshake, goRealTool }) {
+export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
   const [profile,         setProfile]         = useState(null)
   const [tools,           setTools]           = useState([])
   const [activeLoans,     setActiveLoans]     = useState([])
@@ -24,7 +24,7 @@ export default function HomeScreen({ goHandshake, goRealTool }) {
     const [{ data: prof }, { data: toolsData }, { data: loansData }, { data: myTools }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('tools').select('*, profiles(full_name, trust_score)').eq('visibility','public').eq('is_available',true).neq('owner_id', user.id).limit(6),
-      supabase.from('loans').select('*, tools(name)').eq('borrower_id', user.id).eq('status','active'),
+      supabase.from('loans').select('*, tools(name)').eq('borrower_id', user.id).in('status',['active','approved','requested']),
       supabase.from('tools').select('id').eq('owner_id', user.id),
     ])
 
@@ -132,11 +132,11 @@ export default function HomeScreen({ goHandshake, goRealTool }) {
       {/* Quick actions */}
       <div style={{ display:'flex', gap:10, padding:'12px 14px 0' }}>
         {[
-          { emoji:'🔍', label:'Browse Tools',  color:C.blue,   bg:C.blueL   },
-          { emoji:'📦', label:'My Shed',       color:C.orange, bg:C.orangeL },
-          { emoji:'👥', label:'Neighbors',     color:C.green,  bg:C.greenL  },
+          { emoji:'🔍', label:'Browse',    color:C.blue,   bg:C.blueL,   go:'browse'    },
+{ emoji:'📦', label:'My Shed',   color:C.orange, bg:C.orangeL, go:'shed'      },
+{ emoji:'📋', label:'My Loans',  color:C.green,  bg:C.greenL,  go:'myloans'   },
         ].map((a, i) => (
-          <div key={i} className="tp" style={{ flex:1, background:C.card, borderRadius:14, padding:'12px 8px', textAlign:'center', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
+          <div key={i} onClick={() => a.go && navigate(a.go)} className="tp" style={{ flex:1, background:C.card, borderRadius:14, padding:'12px 8px', textAlign:'center', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
             <div style={{ fontSize:22, marginBottom:6 }}>{a.emoji}</div>
             <div style={{ fontSize:11, fontWeight:600, color:C.t1 }}>{a.label}</div>
           </div>
