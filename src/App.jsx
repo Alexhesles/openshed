@@ -35,7 +35,8 @@ export default function App() {
   const [realTool,     setRealTool]     = useState(null)
   const [editTool,     setEditTool]     = useState(null)
   const [selGroup,     setSelGroup]     = useState(null)
-  const [msgRecipient, setMsgRecipient] = useState({ id:null, name:'' })
+  const [msgRecipient,   setMsgRecipient]   = useState({ id:null, name:'' })
+const [profileRefresh, setProfileRefresh] = useState(0)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -50,6 +51,7 @@ export default function App() {
   const goBack = () => {
     setHistory(h => {
       const prev = h.length > 1 ? h[h.length - 2] : 'home'
+      if (screen === 'account') setProfileRefresh(r => r + 1)
       setScreen(prev)
       setTool(null); setRealTool(null); setEditTool(null); setSelGroup(null)
       return h.slice(0, -1)
@@ -83,7 +85,7 @@ export default function App() {
     messages:      <MessagesScreen     onBack={goBack}/>,
     chat:          <MessagesScreen     initialRecipientId={msgRecipient.id} initialRecipientName={msgRecipient.name} onBack={goBack}/>,
     neighbors:     <NeighborsScreen    goCreateGroup={() => navigate('creategroup')} goJoinGroup={() => navigate('joingroup')} goGroupDetail={goGroupDetail}/>,
-    profile:       <ProfileScreen      goPaywall={() => navigate('paywall')} goNotifications={() => navigate('notifications')} goPrivacy={() => navigate('privacy')} goPayment={() => navigate('payment')} goAccount={() => navigate('account')}/>,
+   profile:       <ProfileScreen      goPaywall={() => navigate('paywall')} goNotifications={() => navigate('notifications')} goPrivacy={() => navigate('privacy')} goPayment={() => navigate('payment')} goAccount={() => navigate('account')} refreshKey={profileRefresh}/>,
     paywall:       <PaywallScreen      onBack={goBack}/>,
     notifications: <NotificationsScreen onBack={goBack}/>,
     privacy:       <PrivacyScreen      onBack={goBack}/>,
