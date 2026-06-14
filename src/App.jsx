@@ -2,17 +2,17 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase.js'
 import { GlobalStyles } from './components/atoms.jsx'
 import Nav from './components/Nav.jsx'
-import AuthScreen from './screens/AuthScreen.jsx'
-
-import HomeScreen      from './screens/HomeScreen.jsx'
-import BrowseScreen    from './screens/BrowseScreen.jsx'
-import DetailScreen    from './screens/DetailScreen.jsx'
-import PhotoScreen     from './screens/PhotoScreen.jsx'
-import ShedScreen      from './screens/ShedScreen.jsx'
+import AuthScreen     from './screens/AuthScreen.jsx'
+import HomeScreen     from './screens/HomeScreen.jsx'
+import BrowseScreen   from './screens/BrowseScreen.jsx'
+import DetailScreen   from './screens/DetailScreen.jsx'
+import PhotoScreen    from './screens/PhotoScreen.jsx'
+import ShedScreen     from './screens/ShedScreen.jsx'
+import AddToolScreen  from './screens/AddToolScreen.jsx'
 import HandshakeScreen from './screens/HandshakeScreen.jsx'
 import NeighborsScreen, { ProfileScreen, PaywallScreen } from './screens/NeighborsProfilePaywall.jsx'
 
-const FULLSCREEN = ['detail', 'handshake', 'photo', 'paywall']
+const FULLSCREEN = ['detail','handshake','photo','paywall','addtool']
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -26,7 +26,7 @@ export default function App() {
       setSession(session)
       setLoading(false)
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setSession(session)
     })
     return () => subscription.unsubscribe()
@@ -37,8 +37,9 @@ export default function App() {
   const goTool   = (t) => { setTool(t); navigate('detail') }
 
   if (loading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#F5F5F7' }}>
-      <div style={{ fontSize:32 }}>🏗️</div>
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#F5F5F7', flexDirection:'column', gap:12 }}>
+      <div style={{ fontSize:36 }}>🏗️</div>
+      <div style={{ fontSize:13, color:'#6E6E73' }}>Loading OpenShed...</div>
     </div>
   )
 
@@ -47,7 +48,8 @@ export default function App() {
     browse:    <BrowseScreen goTool={goTool}/>,
     detail:    tool ? <DetailScreen tool={tool} onBack={goBack} goPhoto={() => navigate('photo')}/> : null,
     photo:     <PhotoScreen onBack={goBack} mode="return"/>,
-    shed:      <ShedScreen/>,
+    shed:      <ShedScreen onAddTool={() => navigate('addtool')}/>,
+    addtool:   <AddToolScreen onBack={goBack} onSaved={() => { goBack(); setScreen('shed') }}/>,
     handshake: <HandshakeScreen onBack={goBack} goPhoto={() => navigate('photo')}/>,
     neighbors: <NeighborsScreen/>,
     profile:   <ProfileScreen goPaywall={() => navigate('paywall')}/>,
