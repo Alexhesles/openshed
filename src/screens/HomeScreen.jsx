@@ -17,7 +17,20 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
   const [pendingOpen,     setPendingOpen]     = useState(false)
   const [loading,         setLoading]         = useState(true)
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    loadData()
+    let channel
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      channel = supabase.channel('unread-msgs')
+        .on('postgres_changes', { event: '*', schema:'public', table:'messages', filter:`to_id=eq.${user.id}` },
+          async () => {
+            const { data } = await supabase.from('messages').select('id').eq('to_id', user.id).eq('read', false)
+            setUnreadMsgs(data?.length || 0)
+          }
+        ).subscribe()
+    })
+    return () => { if (channel) supabase.removeChannel(channel) }
+  }, [])
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
