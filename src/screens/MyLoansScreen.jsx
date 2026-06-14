@@ -6,11 +6,11 @@ import { Wrench, Hammer, Leaf, Zap, Droplets, Clock, CheckCircle, XCircle, Rotat
 const CAT_ICONS  = { 'Power Tools':Hammer, 'Yard & Garden':Leaf, 'Cleaning':Droplets, 'Hand Tools':Wrench, 'Other':Zap }
 const CAT_COLORS = { 'Power Tools':'#FF9500', 'Yard & Garden':'#34C759', 'Cleaning':'#007AFF', 'Hand Tools':'#007AFF', 'Other':'#AF52DE' }
 const STATUS = {
-  requested: { label:'Pending approval',            color:'#FF9500', bg:'#FFF4E0', Icon:Clock       },
-  approved:  { label:'Approved — Ready to pickup!', color:'#34C759', bg:'#E8F9ED', Icon:CheckCircle },
-  active:    { label:'Active loan',                 color:'#007AFF', bg:'#EAF3FF', Icon:CheckCircle },
-  returned:  { label:'Returned',                    color:'#8E8E93', bg:'#F2F2F7', Icon:CheckCircle },
-  cancelled: { label:'Declined',                    color:'#FF3B30', bg:'#FFECEB', Icon:XCircle     },
+  requested: { label:'Pending approval',             color:'#FF9500', bg:'#FFF4E0', Icon:Clock       },
+  approved:  { label:'Approved — Ready to pickup!',  color:'#34C759', bg:'#E8F9ED', Icon:CheckCircle },
+  active:    { label:'Active loan',                  color:'#007AFF', bg:'#EAF3FF', Icon:CheckCircle },
+  returned:  { label:'Returned',                     color:'#8E8E93', bg:'#F2F2F7', Icon:CheckCircle },
+  cancelled: { label:'Declined',                     color:'#FF3B30', bg:'#FFECEB', Icon:XCircle     },
 }
 const LABELS = ['','Poor','Fair','Good','Great','Excellent!']
 
@@ -18,7 +18,7 @@ function StarRating({ value, onChange }) {
   return (
     <div style={{ display:'flex', gap:8, justifyContent:'center', margin:'16px 0' }}>
       {[1,2,3,4,5].map(n => (
-        <Star key={n} size={38} color={C.orange} fill={n <= value ? C.orange : 'none'}
+        <Star key={n} size={38} color={C.orange} fill={n<=value?C.orange:'none'}
           strokeWidth={1.5} onClick={() => onChange(n)} style={{ cursor:'pointer' }}/>
       ))}
     </div>
@@ -39,7 +39,7 @@ export default function MyLoansScreen() {
     const { data: { user } } = await supabase.auth.getUser()
     const { data } = await supabase
       .from('loans')
-      .select('*, tools(id, name, brand, category, health, is_free, price_per_day), profiles!lender_id(full_name)')
+      .select('*, tools(id, name, brand, category, health, is_free, price_per_day, photo_urls), profiles!lender_id(full_name)')
       .eq('borrower_id', user.id)
       .order('created_at', { ascending: false })
     setLoans(data || [])
@@ -49,12 +49,8 @@ export default function MyLoansScreen() {
   const confirmReturn = async () => {
     if (rating === 0) return
     setSubmitting(true)
-    await supabase.from('loans').update({
-      status: 'returned',
-      actual_return_date: new Date().toISOString(),
-      rating,
-    }).eq('id', returning.id)
-    await supabase.from('tools').update({ is_available: true }).eq('id', returning.tools?.id)
+    await supabase.from('loans').update({ status:'returned', actual_return_date:new Date().toISOString(), rating }).eq('id', returning.id)
+    await supabase.from('tools').update({ is_available:true }).eq('id', returning.tools?.id)
     setLoans(prev => prev.map(l => l.id === returning.id ? { ...l, status:'returned', rating } : l))
     setReturning(null); setRating(0); setSubmitting(false)
   }
@@ -81,8 +77,8 @@ export default function MyLoansScreen() {
                 style={{ flex:1, background:C.cardAlt, border:`1px solid ${C.brd}`, borderRadius:12, padding:'12px 0', fontWeight:600, fontSize:13, color:C.t1, cursor:'pointer' }}>
                 Cancel
               </button>
-              <button onClick={confirmReturn} disabled={rating === 0 || submitting}
-                style={{ flex:1, background:rating > 0 ? C.blue : '#C7C7CC', border:'none', borderRadius:12, padding:'12px 0', fontWeight:700, fontSize:13, color:'white', cursor:rating > 0 ? 'pointer' : 'not-allowed' }}>
+              <button onClick={confirmReturn} disabled={rating===0||submitting}
+                style={{ flex:1, background:rating>0?C.blue:'#C7C7CC', border:'none', borderRadius:12, padding:'12px 0', fontWeight:700, fontSize:13, color:'white', cursor:rating>0?'pointer':'not-allowed' }}>
                 {submitting ? 'Submitting...' : 'Confirm Return'}
               </button>
             </div>
@@ -93,8 +89,8 @@ export default function MyLoansScreen() {
       <div style={{ background:C.card, padding:'8px 16px 14px', borderBottom:`1px solid ${C.brd}` }}>
         <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px' }}>My Loans</div>
         <div style={{ fontSize:13, color:C.t2, marginTop:2 }}>{active.length} active · {history.length} past</div>
-        <div style={{ display:'flex', gap:0, marginTop:12, background:C.cardAlt, borderRadius:10, padding:3, border:`1px solid ${C.brd}` }}>
-          {[['active','Active'],['history','History']].map(([id, label]) => (
+        <div style={{ display:'flex', marginTop:12, background:C.cardAlt, borderRadius:10, padding:3, border:`1px solid ${C.brd}` }}>
+          {[['active','Active'],['history','History']].map(([id,label]) => (
             <button key={id} onClick={() => setTab(id)}
               style={{ flex:1, border:'none', borderRadius:8, padding:'8px 0', fontWeight:600, fontSize:13, cursor:'pointer', background:tab===id?C.card:'transparent', color:tab===id?C.t1:C.t2, boxShadow:tab===id?C.sh:'none' }}>
               {label}
@@ -109,8 +105,8 @@ export default function MyLoansScreen() {
         ) : shown.length === 0 ? (
           <div style={{ background:C.card, borderRadius:16, padding:'32px 20px', textAlign:'center', boxShadow:C.sh }}>
             <div style={{ fontSize:36, marginBottom:12 }}>📦</div>
-            <div style={{ fontWeight:700, fontSize:15, color:C.t1 }}>{tab === 'active' ? 'No active loans' : 'No loan history yet'}</div>
-            <div style={{ fontSize:13, color:C.t2, marginTop:6 }}>{tab === 'active' ? 'Browse tools and request to borrow one!' : 'Completed loans appear here.'}</div>
+            <div style={{ fontWeight:700, fontSize:15, color:C.t1 }}>{tab==='active'?'No active loans':'No loan history yet'}</div>
+            <div style={{ fontSize:13, color:C.t2, marginTop:6 }}>{tab==='active'?'Browse tools and request to borrow one!':'Completed loans appear here.'}</div>
           </div>
         ) : shown.map(loan => {
           const st    = STATUS[loan.status] || STATUS.requested
@@ -118,17 +114,21 @@ export default function MyLoansScreen() {
           const Icon  = CAT_ICONS[tool?.category] || Wrench
           const color = CAT_COLORS[tool?.category] || C.blue
           const canReturn = ['approved','active'].includes(loan.status)
+
           return (
             <div key={loan.id} style={{ background:C.card, borderRadius:16, marginBottom:12, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
               <div style={{ display:'flex', alignItems:'center', gap:12, padding:14 }}>
-                <div style={{ width:48, height:48, borderRadius:14, background:`${color}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <Icon size={22} color={color} strokeWidth={1.5}/>
+                <div style={{ width:56, height:56, borderRadius:14, background:`${color}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
+                  {tool?.photo_urls?.[0]
+                    ? <img src={tool.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'contain' }} alt={tool.name}/>
+                    : <Icon size={24} color={color} strokeWidth={1.5}/>
+                  }
                 </div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:700, fontSize:14, color:C.t1 }}>{tool?.name || 'Tool'}</div>
                   <div style={{ fontSize:11, color:C.t2, marginTop:2 }}>{tool?.brand || ''} · Owner: {loan.profiles?.full_name || 'Neighbor'}</div>
                 </div>
-                <div style={{ fontSize:14, fontWeight:700, color:tool?.is_free ? C.green : C.t1 }}>
+                <div style={{ fontSize:14, fontWeight:700, color:tool?.is_free?C.green:C.t1 }}>
                   {tool?.is_free ? 'Free' : `$${tool?.price_per_day}/day`}
                 </div>
               </div>
