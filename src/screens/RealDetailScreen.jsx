@@ -58,18 +58,25 @@ export default function RealDetailScreen({ tool, onBack }) {
   )
 
   return (
-    <div style={{ height:200, background:`linear-gradient(135deg,${color}10,${color}22)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0, overflow:'hidden' }}>
-  {tool.photo_urls?.[0] ? (
-    <img src={tool.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={tool.name}/>
-  ) : (
-    <div style={{ width:80, height:80, borderRadius:24, background:C.card, boxShadow:`0 8px 24px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <Icon size={40} color={color} strokeWidth={1.5}/>
-    </div>
-  )}
+    <div style={{ flex:1, display:'flex', flexDirection:'column', overflowY:'auto', background:C.bg }}>
+
+      {/* HERO */}
+      <div style={{ height:220, position:'relative', flexShrink:0, overflow:'hidden', background:`linear-gradient(135deg,${color}10,${color}22)`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+        {tool.photo_urls?.[0] ? (
+          <img src={tool.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={tool.name}/>
+        ) : (
+          <div style={{ width:80, height:80, borderRadius:24, background:C.card, boxShadow:`0 8px 24px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <Icon size={40} color={color} strokeWidth={1.5}/>
+          </div>
+        )}
         <button onClick={onBack} className="tp" style={{ position:'absolute', top:12, left:12, background:'rgba(255,255,255,.9)', backdropFilter:'blur(10px)', border:`1px solid ${C.brd}`, borderRadius:20, padding:'7px 14px', display:'flex', alignItems:'center', gap:6 }}>
           <ArrowLeft size={13} color={C.t1}/><span style={{ fontSize:12, fontWeight:600, color:C.t1 }}>Back</span>
         </button>
-        {tool.health && <div style={{ position:'absolute', bottom:12, right:12 }}><HealthBadge pct={tool.health}/></div>}
+        {tool.health && (
+          <div style={{ position:'absolute', bottom:12, right:12 }}>
+            <HealthBadge pct={tool.health}/>
+          </div>
+        )}
       </div>
 
       <div style={{ padding:16 }}>
@@ -79,6 +86,7 @@ export default function RealDetailScreen({ tool, onBack }) {
           {tool.is_free ? 'Free' : `$${tool.price_per_day}/day`}
         </div>
 
+        {/* Owner */}
         <div style={{ display:'flex', alignItems:'center', gap:12, marginTop:14, padding:14, background:C.card, borderRadius:14, boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
           <div style={{ width:44, height:44, borderRadius:22, background:C.blueL, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
             <User size={20} color={C.blue} strokeWidth={1.5}/>
@@ -92,6 +100,7 @@ export default function RealDetailScreen({ tool, onBack }) {
           </div>
         </div>
 
+        {/* Condition */}
         <div style={{ marginTop:12, background:C.card, borderRadius:14, padding:14, boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
           <div style={{ fontWeight:700, fontSize:14, color:C.t1, marginBottom:10 }}>Tool Condition</div>
           <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
@@ -103,13 +112,14 @@ export default function RealDetailScreen({ tool, onBack }) {
           </div>
         </div>
 
+        {/* Waiver */}
         <div style={{ marginTop:12, background:C.orangeL, borderRadius:14, padding:14, border:`1px solid ${C.orange}33` }}>
           <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
             <Shield size={15} color={C.orange}/>
             <span style={{ fontWeight:700, fontSize:13, color:C.orange }}>Liability Waiver Required</span>
           </div>
           <div style={{ fontSize:12, color:C.t1, lineHeight:1.6, marginBottom:10 }}>
-            By signing you release <b>{tool.profiles?.full_name || 'the owner'}</b> from liability. PDF archived with your loan.
+            By signing you release <b>{tool.profiles?.full_name || 'the owner'}</b> from liability.
           </div>
           {!waiver ? (
             <button onClick={() => setWaiver(true)} style={{ background:C.orange, color:'white', border:'none', borderRadius:10, padding:'11px 0', width:'100%', fontWeight:700, fontSize:13, cursor:'pointer' }}>
@@ -117,15 +127,18 @@ export default function RealDetailScreen({ tool, onBack }) {
             </button>
           ) : (
             <div style={{ display:'flex', alignItems:'center', gap:8, color:C.green }}>
-              <CheckCircle size={15}/><span style={{ fontWeight:700, fontSize:13 }}>Signed · PDF sent to both parties</span>
+              <CheckCircle size={15}/><span style={{ fontWeight:700, fontSize:13 }}>Signed</span>
             </div>
           )}
         </div>
 
-        {error && <div style={{ marginTop:12, background:C.redL, borderRadius:10, padding:'10px 14px', fontSize:13, color:C.red }}>{error}</div>}
+        {error && (
+          <div style={{ marginTop:12, background:C.redL, borderRadius:10, padding:'10px 14px', fontSize:13, color:C.red }}>{error}</div>
+        )}
         <div style={{ height:100 }}/>
       </div>
 
+      {/* Footer */}
       <div style={{ position:'sticky', bottom:0, background:'rgba(255,255,255,.95)', backdropFilter:'blur(20px)', borderTop:`1px solid ${C.brd}`, padding:'12px 16px', flexShrink:0 }}>
         <button onClick={requestLoan} disabled={!waiver || loading}
           style={{ background:waiver ? C.blue : '#C7C7CC', color:'white', border:'none', borderRadius:12, padding:'14px 0', width:'100%', fontWeight:700, fontSize:15, cursor:waiver ? 'pointer' : 'not-allowed', boxShadow:waiver ? `0 4px 16px ${C.blue}44` : 'none' }}>
