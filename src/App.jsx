@@ -2,24 +2,26 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase.js'
 import { GlobalStyles } from './components/atoms.jsx'
 import Nav from './components/Nav.jsx'
-import AuthScreen     from './screens/AuthScreen.jsx'
-import HomeScreen     from './screens/HomeScreen.jsx'
-import BrowseScreen   from './screens/BrowseScreen.jsx'
-import DetailScreen   from './screens/DetailScreen.jsx'
-import PhotoScreen    from './screens/PhotoScreen.jsx'
-import ShedScreen     from './screens/ShedScreen.jsx'
-import AddToolScreen  from './screens/AddToolScreen.jsx'
+import AuthScreen      from './screens/AuthScreen.jsx'
+import HomeScreen      from './screens/HomeScreen.jsx'
+import BrowseScreen    from './screens/BrowseScreen.jsx'
+import DetailScreen    from './screens/DetailScreen.jsx'
+import RealDetailScreen from './screens/RealDetailScreen.jsx'
+import PhotoScreen     from './screens/PhotoScreen.jsx'
+import ShedScreen      from './screens/ShedScreen.jsx'
+import AddToolScreen   from './screens/AddToolScreen.jsx'
 import HandshakeScreen from './screens/HandshakeScreen.jsx'
 import NeighborsScreen, { ProfileScreen, PaywallScreen } from './screens/NeighborsProfilePaywall.jsx'
 
-const FULLSCREEN = ['detail','handshake','photo','paywall','addtool']
+const FULLSCREEN = ['detail','realdetail','handshake','photo','paywall','addtool']
 
 export default function App() {
-  const [session, setSession] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [screen,  setScreen]  = useState('home')
-  const [prev,    setPrev]    = useState('home')
-  const [tool,    setTool]    = useState(null)
+  const [session,  setSession]  = useState(null)
+  const [loading,  setLoading]  = useState(true)
+  const [screen,   setScreen]   = useState('home')
+  const [prev,     setPrev]     = useState('home')
+  const [tool,     setTool]     = useState(null)
+  const [realTool, setRealTool] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -32,9 +34,10 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const navigate = (s) => { setPrev(screen); setScreen(s) }
-  const goBack   = ()  => { setScreen(prev || 'home'); setTool(null) }
-  const goTool   = (t) => { setTool(t); navigate('detail') }
+  const navigate    = (s) => { setPrev(screen); setScreen(s) }
+  const goBack      = ()  => { setScreen(prev || 'home'); setTool(null); setRealTool(null) }
+  const goTool      = (t) => { setTool(t);     navigate('detail')     }
+  const goRealTool  = (t) => { setRealTool(t); navigate('realdetail') }
 
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#F5F5F7', flexDirection:'column', gap:12 }}>
@@ -44,16 +47,17 @@ export default function App() {
   )
 
   const screens = {
-    home:      <HomeScreen goTool={goTool} goHandshake={() => navigate('handshake')}/>,
-    browse:    <BrowseScreen goTool={goTool}/>,
-    detail:    tool ? <DetailScreen tool={tool} onBack={goBack} goPhoto={() => navigate('photo')}/> : null,
-    photo:     <PhotoScreen onBack={goBack} mode="return"/>,
-    shed:      <ShedScreen onAddTool={() => navigate('addtool')}/>,
-    addtool:   <AddToolScreen onBack={goBack} onSaved={() => { goBack(); setScreen('shed') }}/>,
-    handshake: <HandshakeScreen onBack={goBack} goPhoto={() => navigate('photo')}/>,
-    neighbors: <NeighborsScreen/>,
-    profile:   <ProfileScreen goPaywall={() => navigate('paywall')}/>,
-    paywall:   <PaywallScreen onBack={goBack}/>,
+    home:       <HomeScreen      goTool={goTool} goHandshake={() => navigate('handshake')}/>,
+    browse:     <BrowseScreen    goRealTool={goRealTool}/>,
+    detail:     tool     ? <DetailScreen     tool={tool}     onBack={goBack} goPhoto={() => navigate('photo')}/> : null,
+    realdetail: realTool ? <RealDetailScreen tool={realTool} onBack={goBack}/> : null,
+    photo:      <PhotoScreen     onBack={goBack} mode="return"/>,
+    shed:       <ShedScreen      onAddTool={() => navigate('addtool')}/>,
+    addtool:    <AddToolScreen   onBack={goBack} onSaved={() => { goBack(); setScreen('shed') }}/>,
+    handshake:  <HandshakeScreen onBack={goBack} goPhoto={() => navigate('photo')}/>,
+    neighbors:  <NeighborsScreen/>,
+    profile:    <ProfileScreen   goPaywall={() => navigate('paywall')}/>,
+    paywall:    <PaywallScreen   onBack={goBack}/>,
   }
 
   return (
