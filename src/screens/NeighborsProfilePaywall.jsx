@@ -116,7 +116,7 @@ export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment
       setProfile(data)
     }
     load()
-  }, [])
+  }, [refreshKey])
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0]
@@ -127,8 +127,9 @@ export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment
     const path = `${user.id}/avatar.${ext}`
     await supabase.storage.from('tool-photos').upload(path, file, { upsert: true })
     const { data } = supabase.storage.from('tool-photos').getPublicUrl(path)
-    await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', user.id)
-    setProfile(p => ({ ...p, avatar_url: data.publicUrl }))
+    const freshUrl = `${data.publicUrl}?t=${Date.now()}`
+    await supabase.from('profiles').update({ avatar_url: freshUrl }).eq('id', user.id)
+    setProfile(p => ({ ...p, avatar_url: freshUrl }))
     setUploadingPic(false)
   }
 
