@@ -68,12 +68,16 @@ export default function BrowseScreen({ goRealTool }) {
                 const color = CAT_COLORS[t.category] || C.blue
                 return (
                   <div key={t.id} onClick={() => goRealTool(t)} className="tp" style={{ background:C.card, borderRadius:16, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
-                    <div style={{ height:100, background:`linear-gradient(135deg,${color}10,${color}20)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-                      <div style={{ width:52, height:52, borderRadius:16, background:C.card, boxShadow:`0 4px 16px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <Icon size={26} color={color} strokeWidth={1.5}/>
-                      </div>
-                      {t.health && <div style={{ position:'absolute', top:8, right:8 }}><HealthBadge pct={t.health}/></div>}
-                    </div>
+                   <div style={{ height:100, background:`linear-gradient(135deg,${color}10,${color}20)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+  {t.photo_urls?.[0] ? (
+    <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={t.name}/>
+  ) : (
+    <div style={{ width:52, height:52, borderRadius:16, background:C.card, boxShadow:`0 4px 16px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <Icon size={26} color={color} strokeWidth={1.5}/>
+    </div>
+  )}
+  {t.health && <div style={{ position:'absolute', top:8, right:8 }}><HealthBadge pct={t.health}/></div>}
+</div>
                     <div style={{ padding:'10px 12px 12px' }}>
                       <div style={{ fontWeight:700, fontSize:13, color:C.t1, lineHeight:1.3 }}>{t.name}</div>
                       <div style={{ fontSize:11, color:C.t2, marginTop:1 }}>{t.brand || 'No brand'} · {t.category}</div>
