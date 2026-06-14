@@ -17,7 +17,11 @@ export default function ShedScreen({ onAddTool }) {
 
   const fetchTools = async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    const { data } = await supabase.from('tools').select('*').eq('owner_id', user.id).order('created_at', { ascending: false })
+    const { data } = await supabase
+      .from('tools')
+      .select('*')
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: false })
     setTools(data || [])
     setLoading(false)
   }
@@ -34,7 +38,7 @@ export default function ShedScreen({ onAddTool }) {
         <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px' }}>My Shed</div>
         <div style={{ fontSize:13, color:C.t2, marginTop:2 }}>{tools.length} tools listed</div>
         <div style={{ display:'flex', gap:10, marginTop:12 }}>
-          {[{ v:tools.length, l:'Tools' },{ v:'0', l:'Active loans' },{ v:'$0', l:'Earned' }].map((s,i) => (
+          {[{ v:tools.length, l:'Tools' }, { v:'0', l:'Active loans' }, { v:'$0', l:'Earned' }].map((s, i) => (
             <div key={i} style={{ flex:1, background:C.cardAlt, borderRadius:12, padding:'10px 8px', textAlign:'center', border:`1px solid ${C.brd}` }}>
               <div style={{ fontWeight:800, fontSize:18, color:C.t1 }}>{s.v}</div>
               <div style={{ fontSize:10, color:C.t2, marginTop:1 }}>{s.l}</div>
@@ -61,27 +65,44 @@ export default function ShedScreen({ onAddTool }) {
           const color = CAT_COLORS[t.category] || C.blue
           return (
             <div key={t.id} style={{ background:C.card, borderRadius:16, marginBottom:10, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
-              <div onClick={() => setExp(exp===i?null:i)} className="tp" style={{ padding:14, display:'flex', alignItems:'center', gap:12 }}>
-                <div style={{ width:48, height:48, borderRadius:14, background:`${color}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
-  {t.photo_urls?.[0]
-    ? <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={t.name}/>
-    : <I size={22} color={color} strokeWidth={1.5}/>
-  }
-</div>
+              <div onClick={() => setExp(exp === i ? null : i)} className="tp" style={{ padding:14, display:'flex', alignItems:'center', gap:12 }}>
+                <div style={{ width:52, height:52, borderRadius:14, background:`${color}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
+                  {t.photo_urls?.[0]
+                    ? <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={t.name}/>
+                    : <Icon size={24} color={color} strokeWidth={1.5}/>
+                  }
+                </div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:700, fontSize:14, color:C.t1 }}>{t.name}</div>
                   <div style={{ fontSize:11, color:C.t2, marginTop:2 }}>{t.brand || 'No brand'} · {t.category}</div>
                   <div style={{ marginTop:5 }}><HealthBadge pct={t.health || 80}/></div>
                 </div>
                 <div style={{ textAlign:'right' }}>
-                  <div style={{ fontWeight:700, fontSize:13, color:t.is_free?C.green:C.t1 }}>{t.is_free?'Free':`$${t.price_per_day}/day`}</div>
+                  <div style={{ fontWeight:700, fontSize:13, color:t.is_free ? C.green : C.t1 }}>
+                    {t.is_free ? 'Free' : `$${t.price_per_day}/day`}
+                  </div>
                   <ChevronRight size={16} color={C.t3} style={{ transform:exp===i?'rotate(90deg)':'none', transition:'transform .2s' }}/>
                 </div>
               </div>
-              {exp===i && (
+
+              {exp === i && (
                 <div style={{ borderTop:`1px solid ${C.brd}`, padding:'12px 14px', background:C.cardAlt }}>
+                  <div style={{ marginBottom:10 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+                      <span style={{ fontSize:12, color:C.t2 }}>Condition</span>
+                      <span style={{ fontSize:12, fontWeight:600, color:h.c }}>{h.l} — {t.health || 80}%</span>
+                    </div>
+                    <div style={{ height:5, background:C.bg, borderRadius:3, overflow:'hidden' }}>
+                      <div style={{ height:'100%', width:`${t.health || 80}%`, background:h.c, borderRadius:3 }}/>
+                    </div>
+                  </div>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                    {[['Condition',`${t.health||80}%`],['Visibility',t.visibility],['Category',t.category],['Added',new Date(t.created_at).toLocaleDateString()]].map(([l,v],j) => (
+                    {[
+                      ['Visibility', t.visibility],
+                      ['Category',   t.category],
+                      ['Pricing',    t.is_free ? 'Free' : `$${t.price_per_day}/day`],
+                      ['Added',      new Date(t.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})],
+                    ].map(([l, v], j) => (
                       <div key={j} style={{ background:C.card, borderRadius:10, padding:'9px 11px', border:`1px solid ${C.brd}` }}>
                         <div style={{ fontSize:10, color:C.t3 }}>{l}</div>
                         <div style={{ fontSize:13, fontWeight:700, color:C.t1, marginTop:3 }}>{v}</div>
