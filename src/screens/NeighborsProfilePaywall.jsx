@@ -1,48 +1,104 @@
 import { useState, useEffect } from 'react'
-import { Bell, ChevronRight, User, Bell as BellIcon, Shield as ShieldIcon, Award as AwardIcon, Settings as SettingsIcon, TrendingUp, ArrowLeft } from 'lucide-react'
+import { Bell, ChevronRight, X, Plus, Users, TrendingUp, ArrowLeft } from 'lucide-react'
 import { C } from '../theme.js'
 import { supabase } from '../lib/supabase.js'
-import { TrustRing, HealthBadge, SectionLabel, Row } from '../components/atoms.jsx'
+import { TrustRing, SectionLabel, Row } from '../components/atoms.jsx'
 import { ACTIVITY_FEED, PLANS } from '../data/index.js'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Bell as BellIcon, Shield as ShieldIcon, Award as AwardIcon, Settings as SettingsIcon } from 'lucide-react'
 
 // ── NEIGHBORS ─────────────────────────────────────────────────────────────────
-export default function NeighborsScreen() {
-  const [sos, setSos] = useState(false)
-  const GROUPS = [
-    { name:'Maple Street HOA',  sub:'Geographic · 0.3 mi radius · 22 members · 89 tools',  rank:'#3 lender this month', color:C.blue   },
-    { name:'Woodworking Guild', sub:'Interest group · Members only · 67 members · 203 tools', rank:'Active member',       color:C.purple },
-  ]
+export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDetail }) {
+  const [sos,    setSos]    = useState(false)
+  const [groups, setGroups] = useState([])
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: memberships } = await supabase
+        .from('group_members')
+        .select('group_id, groups(id, name, type, invite_code)')
+        .eq('profile_id', user.id)
+      setGroups(memberships?.map(m => m.groups).filter(Boolean) || [])
+    }
+    fetchGroups()
+  }, [])
+
   return (
     <div style={{ flex:1, overflowY:'auto', background:C.bg }}>
       <div style={{ background:C.card, padding:'8px 16px 14px', borderBottom:`1px solid ${C.brd}` }}>
-        <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px' }}>Neighbors</div>
-        <div style={{ fontSize:13, color:C.t2, marginTop:2 }}>2 groups · 47 active neighbors</div>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div>
+            <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px' }}>Neighbors</div>
+            <div style={{ fontSize:13, color:C.t2, marginTop:2 }}>{groups.length} group{groups.length !== 1 ? 's' : ''} · Community hub</div>
+          </div>
+        </div>
       </div>
+
       <div style={{ padding:'14px 14px 0' }}>
+        {/* SOS */}
         <div style={{ background:sos?C.redL:C.card, border:`1.5px solid ${sos?C.red:C.brd}`, borderRadius:16, padding:16, marginBottom:14, boxShadow:C.sh }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
             <button className="rg tp" style={{ background:C.red, border:'none', borderRadius:20, padding:'6px 14px', display:'flex', alignItems:'center', gap:6 }}>
-              <BellIcon size={12} color="white" strokeWidth={1.5}/><span style={{ color:'white', fontWeight:800, fontSize:11 }}>EMERGENCY SOS</span>
+              <BellIcon size={12} color="white" strokeWidth={1.5}/>
+              <span style={{ color:'white', fontWeight:800, fontSize:11 }}>EMERGENCY SOS</span>
             </button>
             <span style={{ fontSize:12, color:C.t2 }}>Neighborhood alert</span>
           </div>
-          <div style={{ fontSize:12, color:C.t2, lineHeight:1.6, marginBottom:12 }}>Alert neighbors within 0.5 miles. Responding in 1 hour earns <span style={{ fontWeight:700, color:C.orange }}>double Trust Points</span>.</div>
+          <div style={{ fontSize:12, color:C.t2, lineHeight:1.6, marginBottom:12 }}>
+            Alert neighbors within 0.5 miles. Responding within 1 hour earns <span style={{ fontWeight:700, color:C.orange }}>double Trust Points</span>.
+          </div>
           {!sos ? (
-            <button onClick={() => setSos(true)} style={{ background:C.red, color:'white', border:'none', borderRadius:10, padding:'11px 0', width:'100%', fontWeight:700, fontSize:13, cursor:'pointer' }}>Send Emergency Alert</button>
+            <button onClick={() => setSos(true)} style={{ background:C.red, color:'white', border:'none', borderRadius:10, padding:'11px 0', width:'100%', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+              Send Emergency Alert
+            </button>
           ) : (
             <div>
               <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:6 }}>
-                <span className="bl" style={{ width:7, height:7, borderRadius:4, background:C.red, display:'block' }}/>
+                <span style={{ width:7, height:7, borderRadius:4, background:C.red, display:'block' }}/>
                 <span style={{ fontWeight:700, fontSize:13, color:C.red }}>ALERT ACTIVE · expires in 3h 42min</span>
               </div>
               <div style={{ fontSize:12, color:C.t2, marginBottom:10 }}>3 neighbors notified · 1 replied: "I have one, be there in 20 min"</div>
-              <button onClick={() => setSos(false)} style={{ background:'transparent', border:`1.5px solid ${C.red}`, color:C.red, borderRadius:10, padding:'9px 0', width:'100%', fontSize:12, fontWeight:700, cursor:'pointer' }}>Cancel Alert</button>
+              <button onClick={() => setSos(false)} style={{ background:'transparent', border:`1.5px solid ${C.red}`, color:C.red, borderRadius:10, padding:'9px 0', width:'100%', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                Cancel Alert
+              </button>
             </div>
           )}
         </div>
+
+        {/* Group actions */}
+        <div style={{ display:'flex', gap:10, marginBottom:14 }}>
+          <button onClick={goCreateGroup} style={{ flex:1, background:C.blue, border:'none', color:'white', borderRadius:12, padding:'11px 0', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, boxShadow:`0 4px 12px ${C.blue}44` }}>
+            <Plus size={15}/> Create Group
+          </button>
+          <button onClick={goJoinGroup} style={{ flex:1, background:C.card, border:`1.5px solid ${C.blue}`, color:C.blue, borderRadius:12, padding:'11px 0', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+            <Users size={15}/> Join Group
+          </button>
+        </div>
+
+        {/* My Groups */}
+        <SectionLabel>My Groups</SectionLabel>
+        {groups.length === 0 ? (
+          <div style={{ background:C.card, borderRadius:16, padding:'24px 20px', textAlign:'center', boxShadow:C.sh, border:`1px solid ${C.brd}`, marginBottom:14 }}>
+            <div style={{ fontSize:32, marginBottom:10 }}>👥</div>
+            <div style={{ fontWeight:700, fontSize:15, color:C.t1 }}>No groups yet</div>
+            <div style={{ fontSize:13, color:C.t2, marginTop:6 }}>Create a group or join one with an invite code</div>
+          </div>
+        ) : groups.map((g, i) => (
+          <div key={g.id} onClick={() => goGroupDetail(g)} className="tp"
+            style={{ background:C.card, borderRadius:14, padding:14, marginBottom:10, boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <div>
+                <div style={{ fontWeight:700, fontSize:14, color:C.t1 }}>{g.name}</div>
+                <div style={{ fontSize:11, color:C.t2, marginTop:2 }}>{g.type} group · Code: <span style={{ fontFamily:'monospace', fontWeight:700, color:C.blue }}>{g.invite_code}</span></div>
+              </div>
+              <ChevronRight size={16} color={C.t3}/>
+            </div>
+          </div>
+        ))}
+
+        {/* Activity feed */}
         <SectionLabel>Live Activity</SectionLabel>
-        <div style={{ background:C.card, borderRadius:16, overflow:'hidden', marginBottom:6, boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
+        <div style={{ background:C.card, borderRadius:16, overflow:'hidden', marginBottom:24, boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
           {ACTIVITY_FEED.map((a, i) => (
             <div key={i} style={{ display:'flex', gap:12, padding:'12px 14px', borderTop:i?`1px solid ${C.brd}`:'none', alignItems:'flex-start' }}>
               <div style={{ width:34, height:34, borderRadius:10, background:`${a.color}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
@@ -53,28 +109,13 @@ export default function NeighborsScreen() {
             </div>
           ))}
         </div>
-        <SectionLabel>My Groups</SectionLabel>
-        {GROUPS.map((cl, i) => (
-          <div key={i} className="tp" style={{ background:C.card, borderRadius:14, padding:14, marginBottom:10, boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-              <div>
-                <div style={{ fontWeight:700, fontSize:14, color:C.t1 }}>{cl.name}</div>
-                <div style={{ fontSize:11, color:C.t2, marginTop:2 }}>{cl.sub}</div>
-              </div>
-              <ChevronRight size={16} color={C.t3}/>
-            </div>
-            <div style={{ marginTop:8, background:`${cl.color}15`, borderRadius:8, padding:'4px 10px', display:'inline-block', border:`1px solid ${cl.color}33` }}>
-              <span style={{ fontSize:11, color:cl.color, fontWeight:700 }}>{cl.rank}</span>
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   )
 }
 
 // ── PROFILE ───────────────────────────────────────────────────────────────────
-export function ProfileScreen({ goPaywall }) {
+export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment, goAccount }) {
   const [profile,  setProfile]  = useState(null)
   const [authUser, setAuthUser] = useState(null)
 
@@ -88,10 +129,7 @@ export function ProfileScreen({ goPaywall }) {
     load()
   }, [])
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-  }
-
+  const handleSignOut = async () => { await supabase.auth.signOut() }
   const avatar = authUser?.user_metadata?.avatar_url
 
   const EVS = [
@@ -104,18 +142,19 @@ export function ProfileScreen({ goPaywall }) {
 
   return (
     <div style={{ flex:1, overflowY:'auto', background:C.bg }}>
+      {/* Header */}
       <div style={{ background:C.card, padding:'8px 16px 20px', borderBottom:`1px solid ${C.brd}` }}>
-        <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px' }}>Profile</div>
-        <div style={{ display:'flex', alignItems:'center', gap:16, marginTop:14 }}>
-          <div style={{ width:64, height:64, borderRadius:32, background:C.blueL, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
+        <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px', marginBottom:14 }}>Profile</div>
+        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+          <div style={{ width:64, height:64, borderRadius:32, background:C.blueL, flexShrink:0, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' }}>
             {avatar
               ? <img src={avatar} style={{ width:64, height:64, objectFit:'cover' }} alt="avatar"/>
-              : <User size={30} color={C.blue} strokeWidth={1.5}/>
+              : <span style={{ fontSize:26, fontWeight:700, color:C.blue }}>{(profile?.full_name||'?')[0]}</span>
             }
           </div>
           <div style={{ flex:1 }}>
-            <div style={{ fontWeight:700, fontSize:17, color:C.t1 }}>{profile?.full_name || authUser?.user_metadata?.full_name || 'Loading...'}</div>
-            <div style={{ fontSize:13, color:C.t2, marginTop:1 }}>
+            <div style={{ fontWeight:700, fontSize:17, color:C.t1 }}>{profile?.full_name || authUser?.user_metadata?.full_name || '...'}</div>
+            <div style={{ fontSize:13, color:C.t2, marginTop:2 }}>
               Member since {profile ? new Date(profile.created_at).toLocaleDateString('en-US',{month:'long',year:'numeric'}) : '...'}
             </div>
           </div>
@@ -123,6 +162,7 @@ export function ProfileScreen({ goPaywall }) {
         </div>
       </div>
 
+      {/* Plan banner */}
       <div style={{ margin:'14px 14px 0', background:`linear-gradient(135deg,${C.blue},${C.blueD})`, borderRadius:16, padding:16, boxShadow:C.shM }}>
         <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.7)', letterSpacing:'0.5px', marginBottom:4 }}>CURRENT PLAN</div>
         <div style={{ fontSize:20, fontWeight:800, color:'white', marginBottom:12, textTransform:'capitalize' }}>{profile?.plan || 'Starter'} — Free</div>
@@ -131,6 +171,7 @@ export function ProfileScreen({ goPaywall }) {
         </button>
       </div>
 
+      {/* Trust Score */}
       <SectionLabel>Trust Score</SectionLabel>
       <div style={{ margin:'0 14px', background:C.card, borderRadius:16, padding:16, boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
         <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:14 }}>
@@ -156,15 +197,17 @@ export function ProfileScreen({ goPaywall }) {
         ))}
       </div>
 
+      {/* Settings */}
       <SectionLabel>Settings</SectionLabel>
       <div style={{ margin:'0 14px 0', background:C.card, borderRadius:16, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
-        <Row icon={BellIcon}     iconBg={C.redL}    iconColor={C.red}    label="Notifications"    sub="Loan alerts, SOS, replies"  onPress={() => {}}/>
-        <Row icon={ShieldIcon}   iconBg={C.greenL}  iconColor={C.green}  label="Privacy & Safety" sub="Visibility, blocked users"   onPress={() => {}}/>
-        <Row icon={AwardIcon}    iconBg={C.orangeL} iconColor={C.orange} label="Payment & Payouts" sub="Stripe · $0 balance"         onPress={() => {}}/>
-        <Row icon={SettingsIcon} iconBg={C.cardAlt} iconColor={C.t2}     label="Account Settings"  noBorder                          onPress={() => {}}/>
+        <Row icon={BellIcon}     iconBg={C.redL}    iconColor={C.red}    label="Notifications"    sub="Loan alerts, SOS, replies"  onPress={goNotifications}/>
+        <Row icon={ShieldIcon}   iconBg={C.greenL}  iconColor={C.green}  label="Privacy & Safety" sub="Visibility, blocked users"   onPress={goPrivacy}/>
+        <Row icon={AwardIcon}    iconBg={C.orangeL} iconColor={C.orange} label="Payment & Payouts" sub="Stripe · $0 balance"         onPress={goPayment}/>
+        <Row icon={SettingsIcon} iconBg={C.cardAlt} iconColor={C.t2}     label="Account Settings"  noBorder                          onPress={goAccount}/>
       </div>
 
-      <div style={{ margin:'12px 14px 24px' }}>
+      {/* Sign Out */}
+      <div style={{ margin:'12px 14px 28px' }}>
         <button onClick={handleSignOut} style={{ width:'100%', background:C.card, border:`1px solid ${C.red}33`, borderRadius:14, padding:'13px 0', fontWeight:700, fontSize:14, color:C.red, cursor:'pointer', boxShadow:C.sh }}>
           Sign Out
         </button>
@@ -188,7 +231,10 @@ export function PaywallScreen({ onBack }) {
         <div style={{ fontSize:13, color:C.t2, marginTop:2 }}>Own less. Do more. Save money.</div>
         <div style={{ display:'flex', gap:0, marginTop:12, background:C.cardAlt, borderRadius:10, padding:3, border:`1px solid ${C.brd}` }}>
           {['Monthly','Annual (save 20%)'].map((lbl,i) => (
-            <button key={i} onClick={() => setAnnual(i===1)} style={{ flex:1, border:'none', borderRadius:8, padding:'7px 0', fontWeight:600, fontSize:12, cursor:'pointer', background:annual===(i===1)?C.card:'transparent', color:annual===(i===1)?C.t1:C.t2, boxShadow:annual===(i===1)?C.sh:'none' }}>{lbl}</button>
+            <button key={i} onClick={() => setAnnual(i===1)}
+              style={{ flex:1, border:'none', borderRadius:8, padding:'7px 0', fontWeight:600, fontSize:12, cursor:'pointer', background:annual===(i===1)?C.card:'transparent', color:annual===(i===1)?C.t1:C.t2, boxShadow:annual===(i===1)?C.sh:'none' }}>
+              {lbl}
+            </button>
           ))}
         </div>
       </div>
@@ -219,7 +265,7 @@ export function PaywallScreen({ onBack }) {
         <button style={{ background:sel==='starter'?'#C7C7CC':C.blue, color:'white', border:'none', borderRadius:14, padding:'16px 0', width:'100%', fontWeight:800, fontSize:16, cursor:'pointer', marginBottom:8 }}>
           {sel==='starter'?'Continue Free →':`Start ${PLANS.find(p=>p.id===sel)?.name} — 7-day free trial`}
         </button>
-        <div style={{ fontSize:11, color:C.t2, textAlign:'center', marginBottom:24 }}>Cancel anytime. No contracts. Prices in USD.</div>
+        <div style={{ fontSize:11, color:C.t2, textAlign:'center', marginBottom:28 }}>Cancel anytime. No contracts. Prices in USD.</div>
       </div>
     </div>
   )
