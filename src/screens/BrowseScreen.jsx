@@ -18,8 +18,12 @@ export default function BrowseScreen({ goRealTool }) {
 
   const fetchTools = async () => {
     setLoading(true)
-    let q = supabase.from('tools').select(`*, profiles(full_name, trust_score)`).eq('visibility','public').eq('is_available', true)
-    const { data } = await q.order('created_at', { ascending: false })
+    const { data } = await supabase
+      .from('tools')
+      .select('*, profiles(full_name, trust_score)')
+      .eq('visibility','public')
+      .eq('is_available', true)
+      .order('created_at', { ascending: false })
     setTools(data || [])
     setLoading(false)
   }
@@ -42,12 +46,8 @@ export default function BrowseScreen({ goRealTool }) {
         <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px', marginBottom:10 }}>Browse Tools</div>
         <div style={{ background:C.cardAlt, borderRadius:12, padding:'9px 14px', display:'flex', alignItems:'center', gap:8, border:`1px solid ${C.brd}` }}>
           <Search size={15} color={C.t2} strokeWidth={1.5}/>
-          <input
-            placeholder="Search tools, equipment…"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            style={{ border:'none', outline:'none', flex:1, fontSize:14, color:C.t1, background:'transparent' }}
-          />
+          <input placeholder="Search tools, equipment…" value={query} onChange={e => setQuery(e.target.value)}
+            style={{ border:'none', outline:'none', flex:1, fontSize:14, color:C.t1, background:'transparent' }}/>
         </div>
         <div style={{ display:'flex', gap:8, marginTop:10, overflowX:'auto', paddingBottom:2 }}>
           {CATEGORIES.map((c, i) => (
@@ -66,21 +66,22 @@ export default function BrowseScreen({ goRealTool }) {
               {filtered.map(t => {
                 const Icon  = CAT_ICONS[t.category]  || Wrench
                 const color = CAT_COLORS[t.category] || C.blue
-                return (height:140
-                  <div key={t.id} onClick={() => goRealTool(t)} className="tp" style={{ background:C.card, borderRadius:16, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
-                   <div style={{ height:140, background:`linear-gradient(135deg,${color}10,${color}20)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
-  {t.photo_urls?.[0] ? (
-    <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={t.name}/>
-  ) : (
-    <div style={{ width:52, height:52, borderRadius:16, background:C.card, boxShadow:`0 4px 16px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <Icon size={26} color={color} strokeWidth={1.5}/>
-    </div>
-  )}
-  {t.health && <div style={{ position:'absolute', top:8, right:8 }}><HealthBadge pct={t.health}/></div>}
-</div>
+                return (
+                  <div key={t.id} onClick={() => goRealTool(t)} className="tp"
+                    style={{ background:C.card, borderRadius:16, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
+                    <div style={{ height:140, background:`linear-gradient(135deg,${color}10,${color}20)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+                      {t.photo_urls?.[0] ? (
+                        <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={t.name}/>
+                      ) : (
+                        <div style={{ width:52, height:52, borderRadius:16, background:C.card, boxShadow:`0 4px 16px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                          <Icon size={26} color={color} strokeWidth={1.5}/>
+                        </div>
+                      )}
+                      {t.health && <div style={{ position:'absolute', top:8, right:8 }}><HealthBadge pct={t.health}/></div>}
+                    </div>
                     <div style={{ padding:'10px 12px 12px' }}>
                       <div style={{ fontWeight:700, fontSize:13, color:C.t1, lineHeight:1.3 }}>{t.name}</div>
-                      <div style={{ fontSize:11, color:C.t2, marginTop:1 }}>{t.brand || 'No brand'} · {t.category}</div>
+                      <div style={{ fontSize:11, color:C.t2, marginTop:1 }}>{t.brand} · {t.category}</div>
                       <div style={{ fontSize:11, color:C.t2, marginTop:2 }}>by {t.profiles?.full_name || 'Neighbor'}</div>
                       <div style={{ fontWeight:700, fontSize:14, color:t.is_free ? C.green : C.t1, marginTop:6 }}>
                         {t.is_free ? 'Free' : `$${t.price_per_day}/day`}
@@ -97,19 +98,13 @@ export default function BrowseScreen({ goRealTool }) {
               <div style={{ width:56, height:56, borderRadius:16, background:C.cardAlt, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px' }}>
                 <Search size={24} color={C.t3} strokeWidth={1.5}/>
               </div>
-              <div style={{ fontWeight:700, fontSize:16, color:C.t1 }}>
-                {query ? `No results for "${query}"` : 'No tools available yet'}
-              </div>
-              <div style={{ fontSize:13, color:C.t2, marginTop:6, lineHeight:1.5 }}>
-                {query ? 'Try a different search or check commercial rentals below.' : 'Be the first to list a tool in your neighborhood!'}
-              </div>
+              <div style={{ fontWeight:700, fontSize:16, color:C.t1 }}>{query ? `No results for "${query}"` : 'No tools available yet'}</div>
+              <div style={{ fontSize:13, color:C.t2, marginTop:6, lineHeight:1.5 }}>Try a different search or check commercial rentals below.</div>
             </div>
-
-            <div style={{ background:C.orangeL, borderRadius:12, padding:'8px 12px', marginBottom:12, display:'flex', alignItems:'center', gap:8, border:`1px solid ${C.orange}22` }}>
+            <div style={{ background:C.orangeL, borderRadius:12, padding:'8px 12px', marginBottom:12, display:'flex', alignItems:'center', gap:8 }}>
               <span style={{ fontSize:10, fontWeight:700, color:C.orange, background:'white', padding:'2px 7px', borderRadius:8 }}>Plan B</span>
-              <span style={{ fontSize:12, color:C.orange, fontWeight:500 }}>Commercial rentals with availability now</span>
+              <span style={{ fontSize:12, color:C.orange }}>Commercial rentals with availability now</span>
             </div>
-
             {commercial.map((r, i) => (
               <div key={i} className="tp" style={{ background:C.card, borderRadius:14, padding:'14px 16px', marginBottom:10, display:'flex', alignItems:'center', gap:14, boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
                 <div style={{ width:44, height:44, borderRadius:12, background:`${r.color}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
