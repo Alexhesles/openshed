@@ -68,7 +68,7 @@ export default function ShedScreen({ onAddTool }) {
               <div onClick={() => setExp(exp === i ? null : i)} className="tp" style={{ padding:14, display:'flex', alignItems:'center', gap:12 }}>
                 <div style={{ width:52, height:52, borderRadius:14, background:`${color}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
                   {t.photo_urls?.[0]
-                    ? <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={t.name}/>
+                    ? <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'contain' }} alt={t.name}/>
                     : <Icon size={24} color={color} strokeWidth={1.5}/>
                   }
                 </div>
