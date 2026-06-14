@@ -12,8 +12,9 @@ import ShedScreen      from './screens/ShedScreen.jsx'
 import AddToolScreen   from './screens/AddToolScreen.jsx'
 import HandshakeScreen from './screens/HandshakeScreen.jsx'
 import NeighborsScreen, { ProfileScreen, PaywallScreen } from './screens/NeighborsProfilePaywall.jsx'
+import MyLoansScreen  from './screens/MyLoansScreen.jsx'
 
-const FULLSCREEN = ['detail','realdetail','handshake','photo','paywall','addtool']
+const FULLSCREEN = ['detail','realdetail','handshake','photo','paywall','addtool','myloans']
 
 export default function App() {
   const [session,  setSession]  = useState(null)
@@ -47,7 +48,7 @@ export default function App() {
   )
 
   const screens = {
-    home:       <HomeScreen      goHandshake={() => navigate('handshake')} goRealTool={goRealTool}/>,
+    home:       <HomeScreen      goHandshake={() => navigate('myloans')} goRealTool={goRealTool}/>,
     browse:     <BrowseScreen    goRealTool={goRealTool}/>,
     detail:     tool     ? <DetailScreen     tool={tool}     onBack={goBack} goPhoto={() => navigate('photo')}/> : null,
     realdetail: realTool ? <RealDetailScreen tool={realTool} onBack={goBack}/> : null,
@@ -58,6 +59,7 @@ export default function App() {
     neighbors:  <NeighborsScreen/>,
     profile:    <ProfileScreen   goPaywall={() => navigate('paywall')}/>,
     paywall:    <PaywallScreen   onBack={goBack}/>,
+    myloans:    <MyLoansScreen/>,
   }
 
   return (
