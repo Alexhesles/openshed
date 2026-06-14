@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Bell, ChevronRight } from 'lucide-react'
+import { Bell, ChevronRight, X, CheckCircle } from 'lucide-react'
 import { C } from '../theme.js'
 import { supabase } from '../lib/supabase.js'
 import { TrustRing, SectionLabel, HealthBadge } from '../components/atoms.jsx'
@@ -9,31 +9,50 @@ const CAT_ICONS  = { 'Power Tools':Hammer, 'Yard & Garden':Leaf, 'Cleaning':Drop
 const CAT_COLORS = { 'Power Tools':'#FF9500', 'Yard & Garden':'#34C759', 'Cleaning':'#007AFF', 'Hand Tools':'#007AFF', 'Other':'#AF52DE' }
 
 export default function HomeScreen({ goHandshake, goRealTool }) {
-  const [profile,      setProfile]      = useState(null)
-  const [tools,        setTools]        = useState([])
-  const [activeLoans,  setActiveLoans]  = useState([])
-  const [loading,      setLoading]      = useState(true)
+  const [profile,         setProfile]         = useState(null)
+  const [tools,           setTools]           = useState([])
+  const [activeLoans,     setActiveLoans]     = useState([])
   const [pendingRequests, setPendingRequests] = useState([])
-const [pendingOpen,     setPendingOpen]     = useState(false)
+  const [pendingOpen,     setPendingOpen]     = useState(false)
+  const [loading,         setLoading]         = useState(true)
 
   useEffect(() => { loadData() }, [])
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
 
-    const [{ data: prof }, { data: toolsData }, { data: loansData }] = await Promise.all([
+    const [{ data: prof }, { data: toolsData }, { data: loansData }, { data: myTools }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('tools').select('*, profiles(full_name, trust_score)').eq('visibility','public').eq('is_available',true).neq('owner_id', user.id).limit(6),
       supabase.from('loans').select('*, tools(name)').eq('borrower_id', user.id).eq('status','active'),
-      supabase.from('loans').select('*, tools(name), profiles(full_name)').eq('status','requested').in('tool_id',
-  (await supabase.from('tools').select('id').eq('owner_id', user.id)).data?.map(t => t.id) || []
-),
+      supabase.from('tools').select('id').eq('owner_id', user.id),
     ])
 
     setProfile(prof)
     setTools(toolsData || [])
     setActiveLoans(loansData || [])
+
+    if (myTools && myTools.length > 0) {
+      const myToolIds = myTools.map(t => t.id)
+      const { data: requests } = await supabase
+        .from('loans')
+        .select('*, tools(name), profiles!borrower_id(full_name)')
+        .in('tool_id', myToolIds)
+        .eq('status', 'requested')
+      setPendingRequests(requests || [])
+    }
+
     setLoading(false)
+  }
+
+  const approveRequest = async (loanId) => {
+    await supabase.from('loans').update({ status:'approved' }).eq('id', loanId)
+    setPendingRequests(p => p.filter(r => r.id !== loanId))
+  }
+
+  const declineRequest = async (loanId) => {
+    await supabase.from('loans').update({ status:'cancelled' }).eq('id', loanId)
+    setPendingRequests(p => p.filter(r => r.id !== loanId))
   }
 
   const firstName = profile?.full_name?.split(' ')[0] || 'there'
@@ -51,17 +70,46 @@ const [pendingOpen,     setPendingOpen]     = useState(false)
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <div onClick={() => setPendingOpen(p => !p)} className="tp" style={{ position:'relative' }}>
-  <Bell size={22} color={pendingRequests.length > 0 ? C.orange : C.t2} strokeWidth={1.5}/>
-  {pendingRequests.length > 0 && (
-    <div style={{ position:'absolute', top:-2, right:-2, width:16, height:16, borderRadius:8, background:C.red, border:`1.5px solid ${C.card}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <span style={{ color:'white', fontSize:9, fontWeight:800 }}>{pendingRequests.length}</span>
-    </div>
-  )}
-</div>
+              <Bell size={22} color={pendingRequests.length > 0 ? C.orange : C.t2} strokeWidth={1.5}/>
+              {pendingRequests.length > 0 && (
+                <div style={{ position:'absolute', top:-2, right:-2, width:16, height:16, borderRadius:8, background:C.red, border:`1.5px solid ${C.card}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <span style={{ color:'white', fontSize:9, fontWeight:800 }}>{pendingRequests.length}</span>
+                </div>
+              )}
+            </div>
             <TrustRing score={profile?.trust_score || 10} size={52} stroke={5}/>
           </div>
         </div>
       </div>
+
+      {/* Notifications panel */}
+      {pendingOpen && (
+        <div style={{ margin:'0 14px', marginTop:10, background:C.card, borderRadius:16, boxShadow:C.shM, border:`1px solid ${C.brd}`, overflow:'hidden' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 14px', borderBottom:`1px solid ${C.brd}` }}>
+            <div style={{ fontWeight:700, fontSize:14, color:C.t1 }}>Loan Requests</div>
+            <X size={16} color={C.t3} onClick={() => setPendingOpen(false)} style={{ cursor:'pointer' }}/>
+          </div>
+          {pendingRequests.length === 0 ? (
+            <div style={{ padding:'20px 14px', textAlign:'center', fontSize:13, color:C.t2 }}>No pending requests</div>
+          ) : pendingRequests.map(r => (
+            <div key={r.id} style={{ padding:'12px 14px', borderBottom:`1px solid ${C.brd}` }}>
+              <div style={{ fontSize:13, fontWeight:600, color:C.t1 }}>
+                {r.profiles?.full_name || 'Someone'} wants to borrow <b>{r.tools?.name}</b>
+              </div>
+              <div style={{ display:'flex', gap:8, marginTop:10 }}>
+                <button onClick={() => approveRequest(r.id)}
+                  style={{ flex:1, background:C.green, border:'none', color:'white', borderRadius:10, padding:'9px 0', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                  Approve ✓
+                </button>
+                <button onClick={() => declineRequest(r.id)}
+                  style={{ flex:1, background:C.redL, border:`1px solid ${C.red}33`, color:C.red, borderRadius:10, padding:'9px 0', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Active loan */}
       {activeLoans.length > 0 && (
