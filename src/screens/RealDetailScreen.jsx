@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, User, Star, Shield, CheckCircle } from 'lucide-react'
+import { ArrowLeft, User, Star, Shield, CheckCircle, MessageCircle } from 'lucide-react'
 import { C, hlt } from '../theme.js'
 import { supabase } from '../lib/supabase.js'
 import { HealthBadge } from '../components/atoms.jsx'
@@ -8,7 +8,7 @@ import { Wrench, Hammer, Leaf, Zap, Droplets } from 'lucide-react'
 const CAT_ICONS  = { 'Power Tools':Hammer, 'Yard & Garden':Leaf, 'Cleaning':Droplets, 'Hand Tools':Wrench, 'Other':Zap }
 const CAT_COLORS = { 'Power Tools':'#FF9500', 'Yard & Garden':'#34C759', 'Cleaning':'#007AFF', 'Hand Tools':'#007AFF', 'Other':'#AF52DE' }
 
-export default function RealDetailScreen({ tool, onBack }) {
+export default function RealDetailScreen({ tool, onBack, goMessage }) {
   const [waiver,    setWaiver]    = useState(false)
   const [requested, setRequested] = useState(false)
   const [loading,   setLoading]   = useState(false)
@@ -19,26 +19,17 @@ export default function RealDetailScreen({ tool, onBack }) {
   const color = CAT_COLORS[tool.category] || C.blue
 
   const requestLoan = async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
     const { data: { user } } = await supabase.auth.getUser()
-    if (user.id === tool.owner_id) {
-      setError("You can't borrow your own tool")
-      setLoading(false)
-      return
-    }
-    const returnBy = new Date()
-    returnBy.setDate(returnBy.getDate() + 1)
+    if (user.id === tool.owner_id) { setError("You can't borrow your own tool"); setLoading(false); return }
+    const returnBy = new Date(); returnBy.setDate(returnBy.getDate() + 1)
     const { error } = await supabase.from('loans').insert({
-      tool_id:          tool.id,
-      borrower_id:      user.id,
-      lender_id:        tool.owner_id,
-      status:           'requested',
-      return_by:        returnBy.toISOString(),
+      tool_id: tool.id, borrower_id: user.id, lender_id: tool.owner_id,
+      status: 'requested', return_by: returnBy.toISOString(),
       waiver_signed_at: new Date().toISOString(),
     })
-    if (error) { setError(error.message) }
-    else { setRequested(true) }
+    if (error) setError(error.message)
+    else setRequested(true)
     setLoading(false)
   }
 
@@ -51,7 +42,11 @@ export default function RealDetailScreen({ tool, onBack }) {
       <div style={{ fontSize:14, color:C.t2, textAlign:'center', lineHeight:1.6, marginBottom:28 }}>
         {tool.profiles?.full_name || 'The owner'} will be notified and can approve your request.
       </div>
-      <button onClick={onBack} style={{ background:C.blue, color:'white', border:'none', borderRadius:12, padding:'14px 32px', fontWeight:700, fontSize:15, cursor:'pointer' }}>
+      <button onClick={() => goMessage && goMessage(tool.owner_id, tool.profiles?.full_name)}
+        style={{ background:C.blueL, border:`1px solid ${C.blue}33`, color:C.blue, borderRadius:12, padding:'12px 28px', fontWeight:700, fontSize:14, cursor:'pointer', marginBottom:12, width:'100%' }}>
+        Message the owner →
+      </button>
+      <button onClick={onBack} style={{ background:C.blue, color:'white', border:'none', borderRadius:12, padding:'12px 28px', fontWeight:700, fontSize:14, cursor:'pointer', width:'100%' }}>
         Back to Browse
       </button>
     </div>
@@ -72,17 +67,13 @@ export default function RealDetailScreen({ tool, onBack }) {
         <button onClick={onBack} className="tp" style={{ position:'absolute', top:12, left:12, background:'rgba(255,255,255,.9)', backdropFilter:'blur(10px)', border:`1px solid ${C.brd}`, borderRadius:20, padding:'7px 14px', display:'flex', alignItems:'center', gap:6 }}>
           <ArrowLeft size={13} color={C.t1}/><span style={{ fontSize:12, fontWeight:600, color:C.t1 }}>Back</span>
         </button>
-        {tool.health && (
-          <div style={{ position:'absolute', bottom:12, right:12 }}>
-            <HealthBadge pct={tool.health}/>
-          </div>
-        )}
+        {tool.health && <div style={{ position:'absolute', bottom:12, right:12 }}><HealthBadge pct={tool.health}/></div>}
       </div>
 
       <div style={{ padding:16 }}>
         <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px' }}>{tool.name}</div>
         <div style={{ fontSize:14, color:C.t2, marginTop:2 }}>{tool.brand || 'No brand'} · {tool.category}</div>
-        <div style={{ fontSize:20, fontWeight:800, color:tool.is_free ? C.green : C.t1, marginTop:8 }}>
+        <div style={{ fontSize:20, fontWeight:800, color:tool.is_free?C.green:C.t1, marginTop:8 }}>
           {tool.is_free ? 'Free' : `$${tool.price_per_day}/day`}
         </div>
 
@@ -98,6 +89,13 @@ export default function RealDetailScreen({ tool, onBack }) {
               <span style={{ fontSize:12, color:C.t2 }}>Trust Score: {tool.profiles?.trust_score || 10}</span>
             </div>
           </div>
+          {goMessage && (
+            <button onClick={() => goMessage(tool.owner_id, tool.profiles?.full_name)} className="tp"
+              style={{ background:C.blueL, border:`1px solid ${C.blue}33`, borderRadius:10, padding:'8px 12px', display:'flex', alignItems:'center', gap:6, cursor:'pointer' }}>
+              <MessageCircle size={14} color={C.blue} strokeWidth={1.5}/>
+              <span style={{ fontSize:12, fontWeight:600, color:C.blue }}>Message</span>
+            </button>
+          )}
         </div>
 
         {/* Condition */}
@@ -132,16 +130,14 @@ export default function RealDetailScreen({ tool, onBack }) {
           )}
         </div>
 
-        {error && (
-          <div style={{ marginTop:12, background:C.redL, borderRadius:10, padding:'10px 14px', fontSize:13, color:C.red }}>{error}</div>
-        )}
+        {error && <div style={{ marginTop:12, background:C.redL, borderRadius:10, padding:'10px 14px', fontSize:13, color:C.red }}>{error}</div>}
         <div style={{ height:100 }}/>
       </div>
 
       {/* Footer */}
       <div style={{ position:'sticky', bottom:0, background:'rgba(255,255,255,.95)', backdropFilter:'blur(20px)', borderTop:`1px solid ${C.brd}`, padding:'12px 16px', flexShrink:0 }}>
-        <button onClick={requestLoan} disabled={!waiver || loading}
-          style={{ background:waiver ? C.blue : '#C7C7CC', color:'white', border:'none', borderRadius:12, padding:'14px 0', width:'100%', fontWeight:700, fontSize:15, cursor:waiver ? 'pointer' : 'not-allowed', boxShadow:waiver ? `0 4px 16px ${C.blue}44` : 'none' }}>
+        <button onClick={requestLoan} disabled={!waiver||loading}
+          style={{ background:waiver?C.blue:'#C7C7CC', color:'white', border:'none', borderRadius:12, padding:'14px 0', width:'100%', fontWeight:700, fontSize:15, cursor:waiver?'pointer':'not-allowed', boxShadow:waiver?`0 4px 16px ${C.blue}44`:'none' }}>
           {loading ? 'Sending request...' : waiver ? 'Request to Borrow →' : 'Sign Waiver First'}
         </button>
       </div>
