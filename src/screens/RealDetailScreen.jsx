@@ -63,7 +63,7 @@ export default function RealDetailScreen({ tool, onBack }) {
       {/* HERO */}
       <div style={{ height:220, position:'relative', flexShrink:0, overflow:'hidden', background:`linear-gradient(135deg,${color}10,${color}22)`, display:'flex', alignItems:'center', justifyContent:'center' }}>
         {tool.photo_urls?.[0] ? (
-          <img src={tool.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={tool.name}/>
+          <img src={tool.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'contain' }} alt={tool.name}/>
         ) : (
           <div style={{ width:80, height:80, borderRadius:24, background:C.card, boxShadow:`0 8px 24px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
             <Icon size={40} color={color} strokeWidth={1.5}/>
