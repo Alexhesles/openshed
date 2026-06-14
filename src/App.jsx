@@ -19,7 +19,7 @@ import NeighborsScreen, { ProfileScreen, PaywallScreen } from './screens/Neighbo
 import { CreateGroupScreen, JoinGroupScreen, GroupDetailScreen } from './screens/GroupScreens.jsx'
 import { NotificationsScreen, PrivacyScreen, PaymentScreen, AccountScreen } from './screens/SettingsScreens.jsx'
 
-const FULLSCREEN = ['detail','realdetail','handshake','photo','paywall','addtool','edittool','myloans',
+const FULLSCREEN = ['detail','realdetail','handshake','photo','paywall','addtool','edittool',
   'notifications','privacy','payment','account','creategroup','joingroup','groupdetail']
 
 export default function App() {
