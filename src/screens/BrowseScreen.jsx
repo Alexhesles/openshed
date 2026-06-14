@@ -66,9 +66,9 @@ export default function BrowseScreen({ goRealTool }) {
               {filtered.map(t => {
                 const Icon  = CAT_ICONS[t.category]  || Wrench
                 const color = CAT_COLORS[t.category] || C.blue
-                return (
+                return (height:140
                   <div key={t.id} onClick={() => goRealTool(t)} className="tp" style={{ background:C.card, borderRadius:16, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
-                   <div style={{ height:100, background:`linear-gradient(135deg,${color}10,${color}20)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+                   <div style={{ height:140, background:`linear-gradient(135deg,${color}10,${color}20)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
   {t.photo_urls?.[0] ? (
     <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={t.name}/>
   ) : (
