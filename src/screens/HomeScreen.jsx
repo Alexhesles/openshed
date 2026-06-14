@@ -13,6 +13,8 @@ export default function HomeScreen({ goHandshake, goRealTool }) {
   const [tools,        setTools]        = useState([])
   const [activeLoans,  setActiveLoans]  = useState([])
   const [loading,      setLoading]      = useState(true)
+  const [pendingRequests, setPendingRequests] = useState([])
+const [pendingOpen,     setPendingOpen]     = useState(false)
 
   useEffect(() => { loadData() }, [])
 
@@ -23,6 +25,9 @@ export default function HomeScreen({ goHandshake, goRealTool }) {
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('tools').select('*, profiles(full_name, trust_score)').eq('visibility','public').eq('is_available',true).neq('owner_id', user.id).limit(6),
       supabase.from('loans').select('*, tools(name)').eq('borrower_id', user.id).eq('status','active'),
+      supabase.from('loans').select('*, tools(name), profiles(full_name)').eq('status','requested').in('tool_id',
+  (await supabase.from('tools').select('id').eq('owner_id', user.id)).data?.map(t => t.id) || []
+),
     ])
 
     setProfile(prof)
@@ -45,10 +50,14 @@ export default function HomeScreen({ goHandshake, goRealTool }) {
             <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px' }}>{firstName}</div>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ position:'relative' }}>
-              <Bell size={22} color={C.t2} strokeWidth={1.5}/>
-              {activeLoans.length > 0 && <div style={{ position:'absolute', top:-2, right:-2, width:8, height:8, borderRadius:4, background:C.red, border:`1.5px solid ${C.card}` }}/>}
-            </div>
+            <div onClick={() => setPendingOpen(p => !p)} className="tp" style={{ position:'relative' }}>
+  <Bell size={22} color={pendingRequests.length > 0 ? C.orange : C.t2} strokeWidth={1.5}/>
+  {pendingRequests.length > 0 && (
+    <div style={{ position:'absolute', top:-2, right:-2, width:16, height:16, borderRadius:8, background:C.red, border:`1.5px solid ${C.card}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <span style={{ color:'white', fontSize:9, fontWeight:800 }}>{pendingRequests.length}</span>
+    </div>
+  )}
+</div>
             <TrustRing score={profile?.trust_score || 10} size={52} stroke={5}/>
           </div>
         </div>
