@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, CheckCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Camera } from 'lucide-react'
 import { C } from '../theme.js'
 import { supabase } from '../lib/supabase.js'
 
@@ -12,22 +12,49 @@ export default function AddToolScreen({ onBack, onSaved }) {
   const [isFree,   setIsFree]   = useState(true)
   const [price,    setPrice]    = useState('')
   const [health,   setHealth]   = useState(80)
+  const [photo,    setPhoto]    = useState(null)
+  const [preview,  setPreview]  = useState(null)
   const [loading,  setLoading]  = useState(false)
   const [success,  setSuccess]  = useState(false)
   const [error,    setError]    = useState('')
+
+  const handlePhoto = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setPhoto(file)
+    setPreview(URL.createObjectURL(file))
+  }
 
   const handleSave = async () => {
     if (!name) { setError('Tool name is required'); return }
     setLoading(true)
     setError('')
+
     const { data: { user } } = await supabase.auth.getUser()
+
+    let photoUrl = null
+    if (photo) {
+      const ext      = photo.name.split('.').pop()
+      const filePath = `${user.id}/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('tool-photos')
+        .upload(filePath, photo)
+
+      if (!uploadError) {
+        const { data } = supabase.storage.from('tool-photos').getPublicUrl(filePath)
+        photoUrl = data.publicUrl
+      }
+    }
+
     const { error } = await supabase.from('tools').insert({
-      owner_id: user.id,
+      owner_id:      user.id,
       name, brand, category, health,
-      is_free: isFree,
+      is_free:       isFree,
       price_per_day: isFree ? null : parseFloat(price),
-      visibility: 'public',
+      visibility:    'public',
+      photo_urls:    photoUrl ? [photoUrl] : null,
     })
+
     if (error) { setError(error.message) }
     else { setSuccess(true); setTimeout(() => onSaved(), 1500) }
     setLoading(false)
@@ -56,6 +83,24 @@ export default function AddToolScreen({ onBack, onSaved }) {
           </div>
         ) : (
           <>
+            {/* Photo upload */}
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:C.t2, letterSpacing:'0.5px', marginBottom:8, textTransform:'uppercase' }}>Photo</div>
+              <label style={{ display:'block', cursor:'pointer' }}>
+                <input type="file" accept="image/*" onChange={handlePhoto} style={{ display:'none' }}/>
+                <div style={{ height:160, background:preview?'transparent':C.cardAlt, borderRadius:16, border:`2px dashed ${preview?C.blue:C.brdM}`, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:8 }}>
+                  {preview ? (
+                    <img src={preview} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt="preview"/>
+                  ) : (
+                    <>
+                      <Camera size={28} color={C.t3} strokeWidth={1.5}/>
+                      <span style={{ fontSize:13, color:C.t2, fontWeight:500 }}>Tap to add a photo</span>
+                    </>
+                  )}
+                </div>
+              </label>
+            </div>
+
             <div style={{ fontSize:11, fontWeight:700, color:C.t2, letterSpacing:'0.5px', marginBottom:6, textTransform:'uppercase' }}>Tool Name *</div>
             <input placeholder="e.g. Orbital Sander" value={name} onChange={e => setName(e.target.value)} style={inp}/>
 
@@ -85,7 +130,7 @@ export default function AddToolScreen({ onBack, onSaved }) {
             {error && <div style={{ background:C.redL, borderRadius:10, padding:'10px 14px', marginBottom:12, fontSize:13, color:C.red }}>{error}</div>}
 
             <button onClick={handleSave} disabled={loading}
-              style={{ background:C.blue, color:'white', border:'none', borderRadius:12, padding:'14px 0', width:'100%', fontWeight:700, fontSize:15, cursor:'pointer', marginTop:8 }}>
+              style={{ background:C.blue, color:'white', border:'none', borderRadius:12, padding:'14px 0', width:'100%', fontWeight:700, fontSize:15, cursor:'pointer', marginTop:8, boxShadow:`0 4px 16px ${C.blue}44` }}>
               {loading ? 'Saving...' : 'Add Tool to Shed'}
             </button>
           </>
