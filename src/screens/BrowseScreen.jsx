@@ -71,7 +71,7 @@ export default function BrowseScreen({ goRealTool }) {
                     style={{ background:C.card, borderRadius:16, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
                     <div style={{ height:140, background:`linear-gradient(135deg,${color}10,${color}20)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
                       {t.photo_urls?.[0] ? (
-                        <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={t.name}/>
+                        <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'contain', padding:8 }} alt={t.name}/>
                       ) : (
                         <div style={{ width:52, height:52, borderRadius:16, background:C.card, boxShadow:`0 4px 16px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
                           <Icon size={26} color={color} strokeWidth={1.5}/>
