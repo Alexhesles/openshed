@@ -91,76 +91,64 @@ const EVS = [
 ]
 
 export function ProfileScreen({ goPaywall }) {
+  const [profile, setProfile] = useState(null)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      setProfile(data)
+    }
+    fetchProfile()
+  }, [])
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+  }
+
   return (
     <div style={{ flex:1, overflowY:'auto', background:C.bg }}>
       <div style={{ background:C.card, padding:'8px 16px 20px', borderBottom:`1px solid ${C.brd}` }}>
         <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px' }}>Profile</div>
         <div style={{ display:'flex', alignItems:'center', gap:16, marginTop:14 }}>
-          <div style={{ width:64, height:64, borderRadius:32, background:C.blueL, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            <User size={30} color={C.blue} strokeWidth={1.5}/>
+          <div style={{ width:64, height:64, borderRadius:32, background:C.blueL, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
+            {profile?.avatar_url
+              ? <img src={profile.avatar_url} style={{ width:64, height:64, objectFit:'cover' }}/>
+              : <User size={30} color={C.blue} strokeWidth={1.5}/>
+            }
           </div>
           <div style={{ flex:1 }}>
-            <div style={{ fontWeight:700, fontSize:17, color:C.t1 }}>Alex Ortega</div>
-            <div style={{ fontSize:13, color:C.t2, marginTop:1 }}>Maple Street · Joined Apr 2024</div>
-            <div style={{ marginTop:6 }}><HealthBadge pct={95}/></div>
+            <div style={{ fontWeight:700, fontSize:17, color:C.t1 }}>{profile?.full_name || 'Loading...'}</div>
+            <div style={{ fontSize:13, color:C.t2, marginTop:1 }}>Member since {profile ? new Date(profile.created_at).toLocaleDateString('en-US', { month:'long', year:'numeric' }) : '...'}</div>
           </div>
-          <TrustRing score={73} size={62} stroke={5}/>
+          <TrustRing score={profile?.trust_score || 10} size={62} stroke={5}/>
         </div>
       </div>
 
-      {/* Plan card */}
       <div style={{ margin:'14px 14px 0', background:`linear-gradient(135deg,${C.blue},${C.blueD})`, borderRadius:16, padding:16, boxShadow:C.shM }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
           <div>
             <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.7)', letterSpacing:'0.5px' }}>CURRENT PLAN</div>
-            <div style={{ fontSize:20, fontWeight:800, color:'white', marginTop:2 }}>Starter — Free</div>
-          </div>
-          <div style={{ background:'rgba(255,255,255,.15)', borderRadius:12, padding:'6px 12px' }}>
-            <span style={{ color:'white', fontSize:12, fontWeight:700 }}>Trial ends in 7 days</span>
+            <div style={{ fontSize:20, fontWeight:800, color:'white', marginTop:2, textTransform:'capitalize' }}>{profile?.plan || 'Starter'}</div>
           </div>
         </div>
-        <div style={{ height:5, background:'rgba(255,255,255,.2)', borderRadius:3, overflow:'hidden', marginBottom:8 }}>
-          <div style={{ height:'100%', width:'60%', background:'white', borderRadius:3 }}/>
-        </div>
-        <div style={{ fontSize:12, color:'rgba(255,255,255,.8)', marginBottom:14 }}>3 of 5 borrows used · 2 of 3 tools listed</div>
         <button onClick={goPaywall} style={{ background:'white', border:'none', color:C.blue, borderRadius:10, padding:'11px 0', width:'100%', fontWeight:700, fontSize:14, cursor:'pointer' }}>
           Upgrade — from $4.99/mo
         </button>
       </div>
 
-      {/* Trust score */}
-      <SectionLabel>Trust Score</SectionLabel>
-      <div style={{ margin:'0 14px', background:C.card, borderRadius:16, padding:16, boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
-        <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:14 }}>
-          <TrustRing score={73} size={80} stroke={6}/>
-          <div>
-            <div style={{ fontWeight:700, fontSize:16, color:C.t1 }}>Trusted Pro</div>
-            <div style={{ fontSize:12, color:C.t2, marginTop:2 }}>27 pts to Community Pillar</div>
-            <div style={{ height:4, background:C.bg, borderRadius:2, overflow:'hidden', width:140, marginTop:8 }}>
-              <div style={{ height:'100%', width:'73%', background:`linear-gradient(90deg,${C.blue},${C.orange})`, borderRadius:2 }}/>
-            </div>
-          </div>
-        </div>
-        {EVS.map((e, i) => (
-          <div key={i} style={{ display:'flex', alignItems:'center', gap:12, paddingTop:i ? 10 : 0, borderTop:i ? `1px solid ${C.brd}` : 'none' }}>
-            <div style={{ width:32, height:32, borderRadius:10, background:`${e.p ? C.green : C.red}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <TrendingUp size={14} color={e.p ? C.green : C.red} strokeWidth={1.5}/>
-            </div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:12, fontWeight:500, color:C.t1 }}>{e.l}</div>
-              <div style={{ fontSize:10, color:C.t3, marginTop:1 }}>{e.f}</div>
-            </div>
-            <span style={{ fontWeight:800, fontSize:15, color:e.p ? C.green : C.red, flexShrink:0 }}>{e.d}</span>
-          </div>
-        ))}
+      <SectionLabel>Settings</SectionLabel>
+      <div style={{ margin:'0 14px 0', background:C.card, borderRadius:16, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
+        <Row icon={BellIcon}     iconBg={C.redL}    iconColor={C.red}    label="Notifications"    sub="Loan alerts, SOS, replies"  onPress={() => {}}/>
+        <Row icon={ShieldIcon}   iconBg={C.greenL}  iconColor={C.green}  label="Privacy & Safety" sub="Visibility, blocked users"   onPress={() => {}}/>
+        <Row icon={AwardIcon}    iconBg={C.orangeL} iconColor={C.orange} label="Payment & Payouts" sub="Stripe · $0 balance"         onPress={() => {}}/>
+        <Row icon={SettingsIcon} iconBg={C.cardAlt} iconColor={C.t2}     label="Account Settings"  noBorder                          onPress={() => {}}/>
       </div>
 
-      <SectionLabel>Settings</SectionLabel>
-      <div style={{ margin:'0 14px 24px', background:C.card, borderRadius:16, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
-        <Row icon={BellIcon}     iconBg={C.redL}    iconColor={C.red}    label="Notifications"   sub="Loan alerts, SOS, replies" onPress={() => {}}/>
-        <Row icon={ShieldIcon}   iconBg={C.greenL}  iconColor={C.green}  label="Privacy & Safety" sub="Visibility, blocked users"  onPress={() => {}}/>
-        <Row icon={AwardIcon}    iconBg={C.orangeL} iconColor={C.orange} label="Payment & Payouts" sub="Stripe · $0 balance"        onPress={() => {}}/>
-        <Row icon={SettingsIcon} iconBg={C.cardAlt} iconColor={C.t2}     label="Account Settings"  noBorder                         onPress={() => {}}/>
+      <div style={{ margin:'12px 14px 24px' }}>
+        <button onClick={handleSignOut} style={{ width:'100%', background:C.card, border:`1px solid ${C.red}33`, borderRadius:14, padding:'13px 0', fontWeight:700, fontSize:14, color:C.red, cursor:'pointer', boxShadow:C.sh }}>
+          Sign Out
+        </button>
       </div>
     </div>
   )
