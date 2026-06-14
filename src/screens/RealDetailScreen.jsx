@@ -58,11 +58,14 @@ export default function RealDetailScreen({ tool, onBack }) {
   )
 
   return (
-    <div style={{ flex:1, display:'flex', flexDirection:'column', overflowY:'auto', background:C.bg }}>
-      <div style={{ height:200, background:`linear-gradient(135deg,${color}10,${color}22)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
-        <div style={{ width:80, height:80, borderRadius:24, background:C.card, boxShadow:`0 8px 24px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <Icon size={40} color={color} strokeWidth={1.5}/>
-        </div>
+    <div style={{ height:200, background:`linear-gradient(135deg,${color}10,${color}22)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0, overflow:'hidden' }}>
+  {tool.photo_urls?.[0] ? (
+    <img src={tool.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={tool.name}/>
+  ) : (
+    <div style={{ width:80, height:80, borderRadius:24, background:C.card, boxShadow:`0 8px 24px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <Icon size={40} color={color} strokeWidth={1.5}/>
+    </div>
+  )}
         <button onClick={onBack} className="tp" style={{ position:'absolute', top:12, left:12, background:'rgba(255,255,255,.9)', backdropFilter:'blur(10px)', border:`1px solid ${C.brd}`, borderRadius:20, padding:'7px 14px', display:'flex', alignItems:'center', gap:6 }}>
           <ArrowLeft size={13} color={C.t1}/><span style={{ fontSize:12, fontWeight:600, color:C.t1 }}>Back</span>
         </button>
