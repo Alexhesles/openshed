@@ -62,9 +62,12 @@ export default function ShedScreen({ onAddTool }) {
           return (
             <div key={t.id} style={{ background:C.card, borderRadius:16, marginBottom:10, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
               <div onClick={() => setExp(exp===i?null:i)} className="tp" style={{ padding:14, display:'flex', alignItems:'center', gap:12 }}>
-                <div style={{ width:48, height:48, borderRadius:14, background:`${color}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <Icon size={22} color={color} strokeWidth={1.5}/>
-                </div>
+                <div style={{ width:48, height:48, borderRadius:14, background:`${color}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
+  {t.photo_urls?.[0]
+    ? <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={t.name}/>
+    : <I size={22} color={color} strokeWidth={1.5}/>
+  }
+</div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:700, fontSize:14, color:C.t1 }}>{t.name}</div>
                   <div style={{ fontSize:11, color:C.t2, marginTop:2 }}>{t.brand || 'No brand'} · {t.category}</div>
