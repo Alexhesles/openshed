@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase.js'
 import { GlobalStyles } from './components/atoms.jsx'
 import Nav from './components/Nav.jsx'
+
 import AuthScreen      from './screens/AuthScreen.jsx'
 import HomeScreen      from './screens/HomeScreen.jsx'
 import BrowseScreen    from './screens/BrowseScreen.jsx'
@@ -10,24 +11,30 @@ import RealDetailScreen from './screens/RealDetailScreen.jsx'
 import PhotoScreen     from './screens/PhotoScreen.jsx'
 import ShedScreen      from './screens/ShedScreen.jsx'
 import AddToolScreen   from './screens/AddToolScreen.jsx'
+import EditToolScreen  from './screens/EditToolScreen.jsx'
 import HandshakeScreen from './screens/HandshakeScreen.jsx'
-import NeighborsScreen, { ProfileScreen, PaywallScreen } from './screens/NeighborsProfilePaywall.jsx'
-import MyLoansScreen  from './screens/MyLoansScreen.jsx'
+import MyLoansScreen   from './screens/MyLoansScreen.jsx'
 
-const FULLSCREEN = ['detail','realdetail','handshake','photo','paywall','addtool','myloans']
+import NeighborsScreen, { ProfileScreen, PaywallScreen } from './screens/NeighborsProfilePaywall.jsx'
+import { CreateGroupScreen, JoinGroupScreen, GroupDetailScreen } from './screens/GroupScreens.jsx'
+import { NotificationsScreen, PrivacyScreen, PaymentScreen, AccountScreen } from './screens/SettingsScreens.jsx'
+
+const FULLSCREEN = ['detail','realdetail','handshake','photo','paywall','addtool','edittool','myloans',
+  'notifications','privacy','payment','account','creategroup','joingroup','groupdetail']
 
 export default function App() {
-  const [session,  setSession]  = useState(null)
-  const [loading,  setLoading]  = useState(true)
-  const [screen,   setScreen]   = useState('home')
-  const [prev,     setPrev]     = useState('home')
-  const [tool,     setTool]     = useState(null)
-  const [realTool, setRealTool] = useState(null)
+  const [session,   setSession]   = useState(null)
+  const [loading,   setLoading]   = useState(true)
+  const [screen,    setScreen]    = useState('home')
+  const [history,   setHistory]   = useState(['home'])
+  const [tool,      setTool]      = useState(null)
+  const [realTool,  setRealTool]  = useState(null)
+  const [editTool,  setEditTool]  = useState(null)
+  const [selGroup,  setSelGroup]  = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setLoading(false)
+      setSession(session); setLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setSession(session)
@@ -35,10 +42,24 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const navigate    = (s) => { setPrev(screen); setScreen(s) }
-  const goBack      = ()  => { setScreen(prev || 'home'); setTool(null); setRealTool(null) }
+  const navigate = (s) => {
+    setHistory(h => [...h, s])
+    setScreen(s)
+  }
+
+  const goBack = () => {
+    setHistory(h => {
+      const prev = h.length > 1 ? h[h.length - 2] : 'home'
+      setScreen(prev)
+      setTool(null); setRealTool(null); setEditTool(null); setSelGroup(null)
+      return h.slice(0, -1)
+    })
+  }
+
   const goTool      = (t) => { setTool(t);     navigate('detail')     }
   const goRealTool  = (t) => { setRealTool(t); navigate('realdetail') }
+  const goEditTool  = (t) => { setEditTool(t); navigate('edittool')   }
+  const goGroupDetail = (g) => { setSelGroup(g); navigate('groupdetail') }
 
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#F5F5F7', flexDirection:'column', gap:12 }}>
@@ -48,18 +69,26 @@ export default function App() {
   )
 
   const screens = {
-    home:       <HomeScreen      goHandshake={() => navigate('myloans')} goRealTool={goRealTool} navigate={navigate}/>,
-    browse:     <BrowseScreen    goRealTool={goRealTool}/>,
-    detail:     tool     ? <DetailScreen     tool={tool}     onBack={goBack} goPhoto={() => navigate('photo')}/> : null,
-    realdetail: realTool ? <RealDetailScreen tool={realTool} onBack={goBack}/> : null,
-    photo:      <PhotoScreen     onBack={goBack} mode="return"/>,
-    shed:       <ShedScreen      onAddTool={() => navigate('addtool')}/>,
-    addtool:    <AddToolScreen   onBack={goBack} onSaved={() => { goBack(); setScreen('shed') }}/>,
-    handshake:  <HandshakeScreen onBack={goBack} goPhoto={() => navigate('photo')}/>,
-    neighbors:  <NeighborsScreen/>,
-    profile:    <ProfileScreen   goPaywall={() => navigate('paywall')}/>,
-    paywall:    <PaywallScreen   onBack={goBack}/>,
-    myloans:    <MyLoansScreen/>,
+    home:        <HomeScreen       goHandshake={() => navigate('myloans')} goRealTool={goRealTool} navigate={navigate}/>,
+    browse:      <BrowseScreen     goRealTool={goRealTool}/>,
+    detail:      tool      ? <DetailScreen      tool={tool}      onBack={goBack} goPhoto={() => navigate('photo')}/> : null,
+    realdetail:  realTool  ? <RealDetailScreen  tool={realTool}  onBack={goBack}/> : null,
+    photo:       <PhotoScreen      onBack={goBack} mode="return"/>,
+    shed:        <ShedScreen       onAddTool={() => navigate('addtool')} onEditTool={goEditTool}/>,
+    addtool:     <AddToolScreen    onBack={goBack} onSaved={() => { goBack(); setScreen('shed') }}/>,
+    edittool:    editTool  ? <EditToolScreen    tool={editTool}  onBack={goBack} onSaved={() => { goBack(); setScreen('shed') }}/> : null,
+    handshake:   <HandshakeScreen  onBack={goBack} goPhoto={() => navigate('photo')}/>,
+    myloans:     <MyLoansScreen/>,
+    neighbors:   <NeighborsScreen  goCreateGroup={() => navigate('creategroup')} goJoinGroup={() => navigate('joingroup')} goGroupDetail={goGroupDetail}/>,
+    profile:     <ProfileScreen    goPaywall={() => navigate('paywall')} goNotifications={() => navigate('notifications')} goPrivacy={() => navigate('privacy')} goPayment={() => navigate('payment')} goAccount={() => navigate('account')}/>,
+    paywall:     <PaywallScreen    onBack={goBack}/>,
+    notifications:<NotificationsScreen onBack={goBack}/>,
+    privacy:     <PrivacyScreen    onBack={goBack}/>,
+    payment:     <PaymentScreen    onBack={goBack}/>,
+    account:     <AccountScreen    onBack={goBack} onSignOut={async () => { await supabase.auth.signOut() }}/>,
+    creategroup: <CreateGroupScreen onBack={goBack} onCreated={() => { goBack(); setScreen('neighbors') }}/>,
+    joingroup:   <JoinGroupScreen  onBack={goBack} onJoined={() => { goBack(); setScreen('neighbors') }}/>,
+    groupdetail: selGroup  ? <GroupDetailScreen  group={selGroup} onBack={goBack}/> : null,
   }
 
   return (
@@ -72,7 +101,7 @@ export default function App() {
         <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
           {!session
             ? <AuthScreen onAuth={() => setScreen('home')}/>
-            : screens[screen] || screens.home
+            : (screens[screen] || screens.home)
           }
         </div>
         {session && !FULLSCREEN.includes(screen) && <Nav current={screen} onChange={setScreen}/>}
