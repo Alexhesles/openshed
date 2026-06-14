@@ -29,7 +29,6 @@ export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDet
         <div style={{ fontSize:13, color:C.t2, marginTop:2 }}>{groups.length} group{groups.length!==1?'s':''} · Community hub</div>
       </div>
       <div style={{ padding:'14px 14px 0' }}>
-        {/* SOS */}
         <div style={{ background:sos?C.redL:C.card, border:`1.5px solid ${sos?C.red:C.brd}`, borderRadius:16, padding:16, marginBottom:14, boxShadow:C.sh }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
             <button className="rg tp" style={{ background:C.red, border:'none', borderRadius:20, padding:'6px 14px', display:'flex', alignItems:'center', gap:6 }}>
@@ -55,7 +54,6 @@ export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDet
           )}
         </div>
 
-        {/* Group actions */}
         <div style={{ display:'flex', gap:10, marginBottom:14 }}>
           <button onClick={goCreateGroup} style={{ flex:1, background:C.blue, border:'none', color:'white', borderRadius:12, padding:'11px 0', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, boxShadow:`0 4px 12px ${C.blue}44` }}>
             <Plus size={15}/>Create Group
@@ -103,7 +101,7 @@ export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDet
 }
 
 // ── PROFILE ───────────────────────────────────────────────────────────────────
-export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment, goAccount }) {
+export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment, goAccount, refreshKey }) {
   const [profile,      setProfile]      = useState(null)
   const [authUser,     setAuthUser]     = useState(null)
   const [uploadingPic, setUploadingPic] = useState(false)
@@ -123,9 +121,9 @@ export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment
     if (!file) return
     setUploadingPic(true)
     const { data: { user } } = await supabase.auth.getUser()
-    const ext = file.name.split('.').pop()
-    const path = `${user.id}/avatar.${ext}`
-    await supabase.storage.from('tool-photos').upload(path, file, { upsert: true })
+    const ext  = file.name.split('.').pop()
+    const path = `${user.id}/avatar-${Date.now()}.${ext}`
+    await supabase.storage.from('tool-photos').upload(path, file)
     const { data } = supabase.storage.from('tool-photos').getPublicUrl(path)
     const freshUrl = `${data.publicUrl}?t=${Date.now()}`
     await supabase.from('profiles').update({ avatar_url: freshUrl }).eq('id', user.id)
@@ -134,7 +132,6 @@ export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment
   }
 
   const handleSignOut = async () => { await supabase.auth.signOut() }
-
   const avatar = profile?.avatar_url || authUser?.user_metadata?.avatar_url
 
   const EVS = [
@@ -150,7 +147,6 @@ export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment
       <div style={{ background:C.card, padding:'8px 16px 20px', borderBottom:`1px solid ${C.brd}` }}>
         <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px', marginBottom:14 }}>Profile</div>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          {/* Avatar with edit */}
           <label style={{ position:'relative', cursor:'pointer', flexShrink:0 }}>
             <input type="file" accept="image/*" onChange={handleAvatarChange} style={{ display:'none' }}/>
             <div style={{ width:64, height:64, borderRadius:32, background:C.blueL, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -177,7 +173,6 @@ export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment
         </div>
       </div>
 
-      {/* Plan banner */}
       <div style={{ margin:'14px 14px 0', background:`linear-gradient(135deg,${C.blue},${C.blueD})`, borderRadius:16, padding:16, boxShadow:C.shM }}>
         <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.7)', letterSpacing:'0.5px', marginBottom:4 }}>CURRENT PLAN</div>
         <div style={{ fontSize:20, fontWeight:800, color:'white', marginBottom:12, textTransform:'capitalize' }}>{profile?.plan||'Starter'} — Free</div>
@@ -186,7 +181,6 @@ export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment
         </button>
       </div>
 
-      {/* Trust Score */}
       <SectionLabel>Trust Score</SectionLabel>
       <div style={{ margin:'0 14px', background:C.card, borderRadius:16, padding:16, boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
         <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:14 }}>
@@ -212,7 +206,6 @@ export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment
         ))}
       </div>
 
-      {/* Settings */}
       <SectionLabel>Settings</SectionLabel>
       <div style={{ margin:'0 14px', background:C.card, borderRadius:16, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
         <Row icon={BellIcon}     iconBg={C.redL}    iconColor={C.red}    label="Notifications"    sub="Loan alerts, SOS, replies"  onPress={goNotifications}/>
