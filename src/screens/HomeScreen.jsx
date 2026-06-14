@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Bell, ChevronRight, X, CheckCircle } from 'lucide-react'
+import { Bell, ChevronRight, X, MessageCircle } from 'lucide-react'
 import { C } from '../theme.js'
 import { supabase } from '../lib/supabase.js'
 import { TrustRing, SectionLabel, HealthBadge } from '../components/atoms.jsx'
@@ -13,6 +13,7 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
   const [tools,           setTools]           = useState([])
   const [activeLoans,     setActiveLoans]     = useState([])
   const [pendingRequests, setPendingRequests] = useState([])
+  const [unreadMsgs,      setUnreadMsgs]      = useState(0)
   const [pendingOpen,     setPendingOpen]     = useState(false)
   const [loading,         setLoading]         = useState(true)
 
@@ -21,27 +22,28 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
 
-    const [{ data: prof }, { data: toolsData }, { data: loansData }, { data: myTools }] = await Promise.all([
+    const [{ data: prof }, { data: toolsData }, { data: loansData }, { data: myTools }, { data: unread }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', user.id).single(),
       supabase.from('tools').select('*, profiles(full_name, trust_score)').eq('visibility','public').eq('is_available',true).neq('owner_id', user.id).limit(6),
       supabase.from('loans').select('*, tools(name)').eq('borrower_id', user.id).in('status',['active','approved','requested']),
       supabase.from('tools').select('id').eq('owner_id', user.id),
+      supabase.from('messages').select('id', { count:'exact' }).eq('to_id', user.id).eq('read', false),
     ])
 
     setProfile(prof)
     setTools(toolsData || [])
     setActiveLoans(loansData || [])
+    setUnreadMsgs(unread?.length || 0)
 
-    if (myTools && myTools.length > 0) {
-      const myToolIds = myTools.map(t => t.id)
+    if (myTools?.length > 0) {
+      const ids = myTools.map(t => t.id)
       const { data: requests } = await supabase
         .from('loans')
         .select('*, tools(name), profiles!borrower_id(full_name)')
-        .in('tool_id', myToolIds)
+        .in('tool_id', ids)
         .eq('status', 'requested')
       setPendingRequests(requests || [])
     }
-
     setLoading(false)
   }
 
@@ -59,6 +61,12 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
   const hour      = new Date().getHours()
   const greeting  = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
+  const quickActions = [
+    { emoji:'🔍', label:'Browse',   go:'browse'  },
+    { emoji:'📦', label:'My Shed',  go:'shed'    },
+    { emoji:'📋', label:'My Loans', go:'myloans' },
+  ]
+
   return (
     <div style={{ flex:1, overflowY:'auto', background:C.bg }}>
       {/* Header */}
@@ -68,16 +76,26 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
             <div style={{ fontSize:12, color:C.t2, fontWeight:500 }}>{greeting},</div>
             <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px' }}>{firstName}</div>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div onClick={() => setPendingOpen(p => !p)} className="tp" style={{ position:'relative' }}>
-              <Bell size={22} color={pendingRequests.length > 0 ? C.orange : C.t2} strokeWidth={1.5}/>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            {/* Messages */}
+            <div onClick={() => navigate('messages')} className="tp" style={{ position:'relative', cursor:'pointer' }}>
+              <MessageCircle size={22} color={unreadMsgs>0?C.blue:C.t2} strokeWidth={1.5}/>
+              {unreadMsgs > 0 && (
+                <div style={{ position:'absolute', top:-4, right:-4, width:16, height:16, borderRadius:8, background:C.blue, border:`1.5px solid ${C.card}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <span style={{ color:'white', fontSize:9, fontWeight:800 }}>{unreadMsgs > 9 ? '9+' : unreadMsgs}</span>
+                </div>
+              )}
+            </div>
+            {/* Bell */}
+            <div onClick={() => setPendingOpen(p => !p)} className="tp" style={{ position:'relative', cursor:'pointer' }}>
+              <Bell size={22} color={pendingRequests.length>0?C.orange:C.t2} strokeWidth={1.5}/>
               {pendingRequests.length > 0 && (
-                <div style={{ position:'absolute', top:-2, right:-2, width:16, height:16, borderRadius:8, background:C.red, border:`1.5px solid ${C.card}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ position:'absolute', top:-4, right:-4, width:16, height:16, borderRadius:8, background:C.red, border:`1.5px solid ${C.card}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
                   <span style={{ color:'white', fontSize:9, fontWeight:800 }}>{pendingRequests.length}</span>
                 </div>
               )}
             </div>
-            <TrustRing score={profile?.trust_score || 10} size={52} stroke={5}/>
+            <TrustRing score={profile?.trust_score||10} size={52} stroke={5}/>
           </div>
         </div>
       </div>
@@ -111,7 +129,7 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
         </div>
       )}
 
-      {/* Active loan */}
+      {/* Active loan banner */}
       {activeLoans.length > 0 && (
         <div onClick={goHandshake} className="tp" style={{ margin:'14px 14px 0', background:C.card, borderRadius:16, padding:'14px 16px', boxShadow:C.shM, border:`1.5px solid ${C.orange}44`, display:'flex', alignItems:'center', gap:14 }}>
           <div style={{ width:42, height:42, borderRadius:12, background:C.orangeL, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
@@ -119,7 +137,7 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
           </div>
           <div style={{ flex:1 }}>
             <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
-              <span className="bl" style={{ width:6, height:6, borderRadius:3, background:C.orange, display:'block' }}/>
+              <span style={{ width:6, height:6, borderRadius:3, background:C.orange, display:'block' }}/>
               <span style={{ fontSize:11, fontWeight:700, color:C.orange }}>ACTIVE LOAN</span>
             </div>
             <div style={{ fontWeight:600, fontSize:14, color:C.t1 }}>{activeLoans[0]?.tools?.name}</div>
@@ -131,12 +149,9 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
 
       {/* Quick actions */}
       <div style={{ display:'flex', gap:10, padding:'12px 14px 0' }}>
-        {[
-          { emoji:'🔍', label:'Browse',    color:C.blue,   bg:C.blueL,   go:'browse'    },
-{ emoji:'📦', label:'My Shed',   color:C.orange, bg:C.orangeL, go:'shed'      },
-{ emoji:'📋', label:'My Loans',  color:C.green,  bg:C.greenL,  go:'myloans'   },
-        ].map((a, i) => (
-          <div key={i} onClick={() => a.go && navigate(a.go)} className="tp" style={{ flex:1, background:C.card, borderRadius:14, padding:'12px 8px', textAlign:'center', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
+        {quickActions.map((a, i) => (
+          <div key={i} onClick={() => navigate(a.go)} className="tp"
+            style={{ flex:1, background:C.card, borderRadius:14, padding:'12px 8px', textAlign:'center', boxShadow:C.sh, border:`1px solid ${C.brd}`, cursor:'pointer' }}>
             <div style={{ fontSize:22, marginBottom:6 }}>{a.emoji}</div>
             <div style={{ fontSize:11, fontWeight:600, color:C.t1 }}>{a.label}</div>
           </div>
@@ -152,7 +167,7 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
           <div style={{ background:C.card, borderRadius:16, padding:'28px 20px', textAlign:'center', boxShadow:C.sh, marginBottom:14 }}>
             <div style={{ fontSize:32, marginBottom:10 }}>🏗️</div>
             <div style={{ fontWeight:700, fontSize:15, color:C.t1 }}>No tools listed yet</div>
-            <div style={{ fontSize:13, color:C.t2, marginTop:4 }}>Be the first to add a tool in your neighborhood!</div>
+            <div style={{ fontSize:13, color:C.t2, marginTop:4 }}>Be the first to add a tool!</div>
           </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:14 }}>
@@ -162,16 +177,17 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
               return (
                 <div key={t.id} onClick={() => goRealTool(t)} className="tp"
                   style={{ background:C.card, borderRadius:16, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
-                  <div style={{ height:96, background:`linear-gradient(135deg,${color}10,${color}20)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-                    <div style={{ width:52, height:52, borderRadius:16, background:C.card, boxShadow:`0 4px 16px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <Icon size={26} color={color} strokeWidth={1.5}/>
-                    </div>
+                  <div style={{ height:96, background:`linear-gradient(135deg,${color}10,${color}20)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+                    {t.photo_urls?.[0]
+                      ? <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'contain', padding:6 }} alt={t.name}/>
+                      : <div style={{ width:52, height:52, borderRadius:16, background:C.card, boxShadow:`0 4px 16px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}><Icon size={26} color={color} strokeWidth={1.5}/></div>
+                    }
                     {t.health && <div style={{ position:'absolute', top:6, right:6 }}><HealthBadge pct={t.health}/></div>}
                   </div>
                   <div style={{ padding:'10px 12px 12px' }}>
                     <div style={{ fontWeight:700, fontSize:13, color:C.t1, lineHeight:1.3 }}>{t.name}</div>
                     <div style={{ fontSize:11, color:C.t2, marginTop:1 }}>{t.brand || 'No brand'}</div>
-                    <div style={{ fontWeight:700, fontSize:14, color:t.is_free ? C.green : C.t1, marginTop:6 }}>
+                    <div style={{ fontWeight:700, fontSize:14, color:t.is_free?C.green:C.t1, marginTop:6 }}>
                       {t.is_free ? 'Free' : `$${t.price_per_day}/day`}
                     </div>
                   </div>
