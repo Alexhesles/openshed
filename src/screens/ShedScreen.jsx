@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, ChevronRight } from 'lucide-react'
+import { Plus, ChevronRight, Trash2, Edit3 } from 'lucide-react'
 import { C, hlt } from '../theme.js'
 import { supabase } from '../lib/supabase.js'
 import { HealthBadge } from '../components/atoms.jsx'
@@ -8,22 +8,29 @@ import { Wrench, Hammer, Leaf, Zap, Droplets } from 'lucide-react'
 const CAT_ICONS  = { 'Power Tools':Hammer, 'Yard & Garden':Leaf, 'Cleaning':Droplets, 'Hand Tools':Wrench, 'Other':Zap }
 const CAT_COLORS = { 'Power Tools':'#FF9500', 'Yard & Garden':'#34C759', 'Cleaning':'#007AFF', 'Hand Tools':'#007AFF', 'Other':'#AF52DE' }
 
-export default function ShedScreen({ onAddTool }) {
-  const [tools,   setTools]   = useState([])
-  const [loading, setLoading] = useState(true)
-  const [exp,     setExp]     = useState(null)
+export default function ShedScreen({ onAddTool, onEditTool }) {
+  const [tools,    setTools]    = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [exp,      setExp]      = useState(null)
+  const [deleting, setDeleting] = useState(null)
+  const [confirm,  setConfirm]  = useState(null)
 
   useEffect(() => { fetchTools() }, [])
 
   const fetchTools = async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    const { data } = await supabase
-      .from('tools')
-      .select('*')
-      .eq('owner_id', user.id)
-      .order('created_at', { ascending: false })
+    const { data } = await supabase.from('tools').select('*').eq('owner_id', user.id).order('created_at', { ascending: false })
     setTools(data || [])
     setLoading(false)
+  }
+
+  const deleteTool = async (id) => {
+    setDeleting(id)
+    await supabase.from('tools').delete().eq('id', id)
+    setTools(prev => prev.filter(t => t.id !== id))
+    setConfirm(null)
+    setDeleting(null)
+    setExp(null)
   }
 
   if (loading) return (
@@ -34,6 +41,29 @@ export default function ShedScreen({ onAddTool }) {
 
   return (
     <div style={{ flex:1, overflowY:'auto', background:C.bg }}>
+
+      {/* Delete confirm modal */}
+      {confirm && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+          <div style={{ background:C.card, borderRadius:20, padding:24, width:'100%', maxWidth:320 }}>
+            <div style={{ fontWeight:800, fontSize:18, color:C.t1, marginBottom:8 }}>Delete tool?</div>
+            <div style={{ fontSize:14, color:C.t2, marginBottom:24 }}>
+              "<b>{confirm.name}</b>" will be permanently removed from your shed.
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={() => setConfirm(null)}
+                style={{ flex:1, background:C.cardAlt, border:`1px solid ${C.brd}`, borderRadius:12, padding:'12px 0', fontWeight:600, fontSize:14, color:C.t1, cursor:'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={() => deleteTool(confirm.id)} disabled={deleting === confirm.id}
+                style={{ flex:1, background:C.red, border:'none', borderRadius:12, padding:'12px 0', fontWeight:700, fontSize:14, color:'white', cursor:'pointer' }}>
+                {deleting === confirm.id ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ background:C.card, padding:'8px 16px 14px', borderBottom:`1px solid ${C.brd}` }}>
         <div style={{ fontSize:22, fontWeight:800, color:C.t1, letterSpacing:'-0.4px' }}>My Shed</div>
         <div style={{ fontSize:13, color:C.t2, marginTop:2 }}>{tools.length} tools listed</div>
@@ -49,8 +79,7 @@ export default function ShedScreen({ onAddTool }) {
 
       <div style={{ padding:'14px 14px 24px' }}>
         <button onClick={onAddTool} style={{ width:'100%', background:C.card, border:`1.5px dashed ${C.blue}`, borderRadius:14, padding:'13px 0', display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginBottom:14, cursor:'pointer', boxShadow:C.sh }}>
-          <Plus size={16} color={C.blue} strokeWidth={2}/>
-          <span style={{ color:C.blue, fontWeight:700, fontSize:14 }}>Add a Tool</span>
+          <Plus size={16} color={C.blue} strokeWidth={2}/><span style={{ color:C.blue, fontWeight:700, fontSize:14 }}>Add a Tool</span>
         </button>
 
         {tools.length === 0 ? (
@@ -60,16 +89,16 @@ export default function ShedScreen({ onAddTool }) {
             <div style={{ fontSize:13, color:C.t2, marginTop:6 }}>Add your first tool to start sharing</div>
           </div>
         ) : tools.map((t, i) => {
-          const h     = hlt(t.health || 80)
+          const h = hlt(t.health || 80)
           const Icon  = CAT_ICONS[t.category]  || Wrench
           const color = CAT_COLORS[t.category] || C.blue
           return (
             <div key={t.id} style={{ background:C.card, borderRadius:16, marginBottom:10, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
               <div onClick={() => setExp(exp === i ? null : i)} className="tp" style={{ padding:14, display:'flex', alignItems:'center', gap:12 }}>
-                <div style={{ width:52, height:52, borderRadius:14, background:`${color}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
+                <div style={{ width:48, height:48, borderRadius:14, background:`${color}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, overflow:'hidden' }}>
                   {t.photo_urls?.[0]
                     ? <img src={t.photo_urls[0]} style={{ width:'100%', height:'100%', objectFit:'contain' }} alt={t.name}/>
-                    : <Icon size={24} color={color} strokeWidth={1.5}/>
+                    : <Icon size={22} color={color} strokeWidth={1.5}/>
                   }
                 </div>
                 <div style={{ flex:1 }}>
@@ -78,36 +107,30 @@ export default function ShedScreen({ onAddTool }) {
                   <div style={{ marginTop:5 }}><HealthBadge pct={t.health || 80}/></div>
                 </div>
                 <div style={{ textAlign:'right' }}>
-                  <div style={{ fontWeight:700, fontSize:13, color:t.is_free ? C.green : C.t1 }}>
-                    {t.is_free ? 'Free' : `$${t.price_per_day}/day`}
-                  </div>
+                  <div style={{ fontWeight:700, fontSize:13, color:t.is_free ? C.green : C.t1 }}>{t.is_free ? 'Free' : `$${t.price_per_day}/day`}</div>
                   <ChevronRight size={16} color={C.t3} style={{ transform:exp===i?'rotate(90deg)':'none', transition:'transform .2s' }}/>
                 </div>
               </div>
 
               {exp === i && (
                 <div style={{ borderTop:`1px solid ${C.brd}`, padding:'12px 14px', background:C.cardAlt }}>
-                  <div style={{ marginBottom:10 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-                      <span style={{ fontSize:12, color:C.t2 }}>Condition</span>
-                      <span style={{ fontSize:12, fontWeight:600, color:h.c }}>{h.l} — {t.health || 80}%</span>
-                    </div>
-                    <div style={{ height:5, background:C.bg, borderRadius:3, overflow:'hidden' }}>
-                      <div style={{ height:'100%', width:`${t.health || 80}%`, background:h.c, borderRadius:3 }}/>
-                    </div>
-                  </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                    {[
-                      ['Visibility', t.visibility],
-                      ['Category',   t.category],
-                      ['Pricing',    t.is_free ? 'Free' : `$${t.price_per_day}/day`],
-                      ['Added',      new Date(t.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})],
-                    ].map(([l, v], j) => (
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:12 }}>
+                    {[['Condition',`${t.health||80}%`],['Visibility',t.visibility],['Category',t.category],['Added',new Date(t.created_at).toLocaleDateString()]].map(([l,v],j) => (
                       <div key={j} style={{ background:C.card, borderRadius:10, padding:'9px 11px', border:`1px solid ${C.brd}` }}>
                         <div style={{ fontSize:10, color:C.t3 }}>{l}</div>
                         <div style={{ fontSize:13, fontWeight:700, color:C.t1, marginTop:3 }}>{v}</div>
                       </div>
                     ))}
+                  </div>
+                  <div style={{ display:'flex', gap:10 }}>
+                    <button onClick={() => onEditTool(t)}
+                      style={{ flex:1, background:C.card, border:`1px solid ${C.blue}`, borderRadius:10, padding:'10px 0', fontWeight:600, fontSize:13, color:C.blue, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                      <Edit3 size={14}/> Edit
+                    </button>
+                    <button onClick={() => setConfirm(t)}
+                      style={{ flex:1, background:C.redL, border:`1px solid ${C.red}33`, borderRadius:10, padding:'10px 0', fontWeight:600, fontSize:13, color:C.red, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                      <Trash2 size={14}/> Delete
+                    </button>
                   </div>
                 </div>
               )}
