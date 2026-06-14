@@ -8,7 +8,7 @@ const CAT_ICONS  = { 'Power Tools':Hammer, 'Yard & Garden':Leaf, 'Cleaning':Drop
 const CAT_COLORS = { 'Power Tools':'#FF9500', 'Yard & Garden':'#34C759', 'Cleaning':'#007AFF', 'Hand Tools':'#007AFF', 'Other':'#AF52DE' }
 const CATEGORIES = ['All', 'Power Tools', 'Yard & Garden', 'Cleaning', 'Camping', 'Hand Tools']
 
-export default function BrowseScreen() {
+export default function BrowseScreen({ goRealTool }) {
   const [tools,    setTools]    = useState([])
   const [loading,  setLoading]  = useState(true)
   const [query,    setQuery]    = useState('')
@@ -67,7 +67,7 @@ export default function BrowseScreen() {
                 const Icon  = CAT_ICONS[t.category]  || Wrench
                 const color = CAT_COLORS[t.category] || C.blue
                 return (
-                  <div key={t.id} className="tp" style={{ background:C.card, borderRadius:16, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
+                  <div key={t.id} onClick={() => goRealTool(t)} className="tp" style={{ background:C.card, borderRadius:16, overflow:'hidden', boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
                     <div style={{ height:100, background:`linear-gradient(135deg,${color}10,${color}20)`, display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
                       <div style={{ width:52, height:52, borderRadius:16, background:C.card, boxShadow:`0 4px 16px ${color}30`, display:'flex', alignItems:'center', justifyContent:'center' }}>
                         <Icon size={26} color={color} strokeWidth={1.5}/>
