@@ -48,7 +48,7 @@ export default function App() {
   )
 
   const screens = {
-    home:       <HomeScreen      goHandshake={() => navigate('myloans')} goRealTool={goRealTool}/>,
+    home:       <HomeScreen      goHandshake={() => navigate('myloans')} goRealTool={goRealTool} navigate={navigate}/>,
     browse:     <BrowseScreen    goRealTool={goRealTool}/>,
     detail:     tool     ? <DetailScreen     tool={tool}     onBack={goBack} goPhoto={() => navigate('photo')}/> : null,
     realdetail: realTool ? <RealDetailScreen tool={realTool} onBack={goBack}/> : null,
