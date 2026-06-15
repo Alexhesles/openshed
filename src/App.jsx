@@ -26,51 +26,49 @@ const FULLSCREEN = [
   'creategroup','joingroup','groupdetail','chat',
 ]
 
+const FONT = "'Inter','SF Pro Display',-apple-system,sans-serif"
+
 export default function App() {
-  const [session,       setSession]       = useState(null)
-  const [loading,       setLoading]       = useState(true)
-  const [screen,        setScreen]        = useState('home')
-  const [history,       setHistory]       = useState(['home'])
-  const [homeKey,       setHomeKey]       = useState(0)
-  const [isDesktop,     setIsDesktop]     = useState(window.innerWidth >= 768)
-  const [profile,       setProfile]       = useState(null)
-  const [authUser,      setAuthUser]      = useState(null)
-  const [unreadMsgs,    setUnreadMsgs]    = useState(0)
-  const [tool,          setTool]          = useState(null)
-  const [realTool,      setRealTool]      = useState(null)
-  const [editTool,      setEditTool]      = useState(null)
-  const [selGroup,      setSelGroup]      = useState(null)
-  const [msgRecipient,  setMsgRecipient]  = useState({ id:null, name:'' })
-  const [profileRefresh,setProfileRefresh]= useState(0)
+  const [session,        setSession]        = useState(null)
+  const [loading,        setLoading]        = useState(true)
+  const [screen,         setScreen]         = useState('home')
+  const [history,        setHistory]        = useState(['home'])
+  const [homeKey,        setHomeKey]        = useState(0)
+  const [isDesktop,      setIsDesktop]      = useState(window.innerWidth >= 768)
+  const [profile,        setProfile]        = useState(null)
+  const [authUser,       setAuthUser]       = useState(null)
+  const [unreadMsgs,     setUnreadMsgs]     = useState(0)
+  const [tool,           setTool]           = useState(null)
+  const [realTool,       setRealTool]       = useState(null)
+  const [editTool,       setEditTool]       = useState(null)
+  const [selGroup,       setSelGroup]       = useState(null)
+  const [msgRecipient,   setMsgRecipient]   = useState({ id:null, name:'' })
+  const [profileRefresh, setProfileRefresh] = useState(0)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session); setLoading(false)
+      if (session?.user?.id) loadSidebarData(session.user.id)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s)
-      if (s) loadSidebarData(s.user.id)
+      if (s?.user?.id) loadSidebarData(s.user.id)
     })
-
     const handleResize = () => setIsDesktop(window.innerWidth >= 768)
     window.addEventListener('resize', handleResize)
     return () => { subscription.unsubscribe(); window.removeEventListener('resize', handleResize) }
   }, [])
 
   const loadSidebarData = async (userId) => {
-    const [{ data: prof }, { data: user }, { data: unread }] = await Promise.all([
+    const [{ data: prof }, { data: userRes }, { data: unread }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).single(),
       supabase.auth.getUser(),
       supabase.from('messages').select('id').eq('to_id', userId).eq('read', false),
     ])
     setProfile(prof)
-    setAuthUser(user?.data?.user)
+    setAuthUser(userRes?.data?.user)
     setUnreadMsgs(unread?.length || 0)
   }
-
-  useEffect(() => {
-    if (session?.user?.id) loadSidebarData(session.user.id)
-  }, [session])
 
   const navigate = (s) => { setHistory(h => [...h, s]); setScreen(s) }
 
@@ -87,21 +85,34 @@ export default function App() {
 
   const handleNavChange = (s) => {
     if (s === 'home') setHomeKey(k => k + 1)
-    if (s === 'messages') { setMsgRecipient({ id:null, name:'' }) }
+    if (s === 'messages') setMsgRecipient({ id:null, name:'' })
     setHistory([s]); setScreen(s)
     setTool(null); setRealTool(null); setEditTool(null); setSelGroup(null)
+    // Refresh unread when returning to any tab
+    if (session?.user?.id) {
+      supabase.from('messages').select('id').eq('to_id', session.user.id).eq('read', false)
+        .then(({ data }) => setUnreadMsgs(data?.length || 0))
+    }
   }
 
-  const goTool        = (t)      => { setTool(t);     navigate('detail')      }
   const goRealTool    = (t)      => { setRealTool(t); navigate('realdetail')  }
   const goEditTool    = (t)      => { setEditTool(t); navigate('edittool')    }
   const goGroupDetail = (g)      => { setSelGroup(g); navigate('groupdetail') }
   const goMessage     = (id, nm) => { setMsgRecipient({ id, name:nm }); navigate('chat') }
 
   if (loading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#F5F5F7', flexDirection:'column', gap:12 }}>
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#F5F5F7', flexDirection:'column', gap:12, fontFamily:FONT }}>
       <div style={{ fontSize:36 }}>🏗️</div>
       <div style={{ fontSize:13, color:'#6E6E73' }}>Loading OpenShed...</div>
+    </div>
+  )
+
+  if (!session) return (
+    <div style={{ height:'100vh', background:'#F5F5F7', fontFamily:FONT, display:'flex', flexDirection:'column' }}>
+      <GlobalStyles/>
+      <div style={{ flex:1, overflow:'hidden' }}>
+        <AuthScreen onAuth={() => setScreen('home')}/>
+      </div>
     </div>
   )
 
@@ -131,20 +142,14 @@ export default function App() {
   }
 
   const currentScreen = screens[screen] || screens.home
+  const showNav = !FULLSCREEN.includes(screen)
 
   // ── DESKTOP ────────────────────────────────────────────────────────────────
-  if (isDesktop && session) {
+  if (isDesktop) {
     return (
-      <div style={{ display:'flex', height:'100vh', background:'#F2F2F7', fontFamily:"'Inter','SF Pro Display',-apple-system,sans-serif" }}>
+      <div style={{ display:'flex', height:'100vh', background:'#F2F2F7', fontFamily:FONT }}>
         <GlobalStyles/>
-        <Sidebar
-          current={screen}
-          onChange={handleNavChange}
-          profile={profile}
-          authUser={authUser}
-          unreadMsgs={unreadMsgs}
-          onMessages={() => handleNavChange('messages')}
-        />
+        <Sidebar current={screen} onChange={handleNavChange} profile={profile} authUser={authUser} unreadMsgs={unreadMsgs} onMessages={() => handleNavChange('messages')}/>
         <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
           <div style={{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', maxWidth:720, width:'100%', margin:'0 auto', alignSelf:'stretch' }}>
             {currentScreen}
@@ -154,35 +159,14 @@ export default function App() {
     )
   }
 
-  // ── MOBILE (phone frame) ───────────────────────────────────────────────────
-  if (!session) {
-    return (
-      <div style={{ display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh', padding:20, background:'#E8E8ED', fontFamily:"'Inter','SF Pro Display',-apple-system,sans-serif" }}>
-        <GlobalStyles/>
-        <div style={{ width:390, height:844, background:'#F5F5F7', borderRadius:54, overflow:'hidden', boxShadow:'0 40px 80px rgba(0,0,0,.22), 0 0 0 10px rgba(0,0,0,.08)', display:'flex', flexDirection:'column' }}>
-          <div style={{ height:44, background:'#FFFFFF', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, borderBottom:'1px solid rgba(60,60,67,.1)' }}>
-            <div style={{ width:120, height:6, background:'#1D1D1F', borderRadius:3 }}/>
-          </div>
-          <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-            <AuthScreen onAuth={() => setScreen('home')}/>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
+  // ── MOBILE (full screen, no phone frame) ───────────────────────────────────
   return (
-    <div style={{ display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh', padding:20, background:'#E8E8ED', fontFamily:"'Inter','SF Pro Display',-apple-system,sans-serif" }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'100vh', height:'100dvh', background:'#F5F5F7', fontFamily:FONT, overflow:'hidden' }}>
       <GlobalStyles/>
-      <div style={{ width:390, height:844, background:'#F5F5F7', borderRadius:54, overflow:'hidden', boxShadow:'0 40px 80px rgba(0,0,0,.22), 0 0 0 10px rgba(0,0,0,.08)', display:'flex', flexDirection:'column' }}>
-        <div style={{ height:44, background:'#FFFFFF', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, borderBottom:'1px solid rgba(60,60,67,.1)' }}>
-          <div style={{ width:120, height:6, background:'#1D1D1F', borderRadius:3 }}/>
-        </div>
-        <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-          {currentScreen}
-        </div>
-        {!FULLSCREEN.includes(screen) && <Nav current={screen} onChange={handleNavChange}/>}
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        {currentScreen}
       </div>
+      {showNav && <Nav current={screen} onChange={handleNavChange}/>}
     </div>
   )
 }
