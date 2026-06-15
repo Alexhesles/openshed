@@ -27,16 +27,17 @@ const FULLSCREEN = [
 ]
 
 export default function App() {
-  const [session,      setSession]      = useState(null)
-  const [loading,      setLoading]      = useState(true)
-  const [screen,       setScreen]       = useState('home')
-  const [history,      setHistory]      = useState(['home'])
-  const [tool,         setTool]         = useState(null)
-  const [realTool,     setRealTool]     = useState(null)
-  const [editTool,     setEditTool]     = useState(null)
-  const [selGroup,     setSelGroup]     = useState(null)
-  const [msgRecipient,   setMsgRecipient]   = useState({ id:null, name:'' })
-const [profileRefresh, setProfileRefresh] = useState(0)
+  const [session,       setSession]       = useState(null)
+  const [loading,       setLoading]       = useState(true)
+  const [screen,        setScreen]        = useState('home')
+  const [history,       setHistory]       = useState(['home'])
+  const [homeKey,       setHomeKey]       = useState(0)
+  const [tool,          setTool]          = useState(null)
+  const [realTool,      setRealTool]      = useState(null)
+  const [editTool,      setEditTool]      = useState(null)
+  const [selGroup,      setSelGroup]      = useState(null)
+  const [msgRecipient,  setMsgRecipient]  = useState({ id:null, name:'' })
+  const [profileRefresh,setProfileRefresh]= useState(0)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -52,17 +53,24 @@ const [profileRefresh, setProfileRefresh] = useState(0)
     setHistory(h => {
       const prev = h.length > 1 ? h[h.length - 2] : 'home'
       if (screen === 'account') setProfileRefresh(r => r + 1)
+      if (prev === 'home') setHomeKey(k => k + 1)
       setScreen(prev)
       setTool(null); setRealTool(null); setEditTool(null); setSelGroup(null)
       return h.slice(0, -1)
     })
   }
 
-  const goTool       = (t)      => { setTool(t);     navigate('detail')      }
-  const goRealTool   = (t)      => { setRealTool(t); navigate('realdetail')  }
-  const goEditTool   = (t)      => { setEditTool(t); navigate('edittool')    }
-  const goGroupDetail= (g)      => { setSelGroup(g); navigate('groupdetail') }
-  const goMessage    = (id, nm) => { setMsgRecipient({ id, name:nm }); navigate('chat') }
+  const handleNavChange = (s) => {
+    if (s === 'home') setHomeKey(k => k + 1)
+    setHistory([s])
+    setScreen(s)
+  }
+
+  const goTool        = (t)      => { setTool(t);     navigate('detail')      }
+  const goRealTool    = (t)      => { setRealTool(t); navigate('realdetail')  }
+  const goEditTool    = (t)      => { setEditTool(t); navigate('edittool')    }
+  const goGroupDetail = (g)      => { setSelGroup(g); navigate('groupdetail') }
+  const goMessage     = (id, nm) => { setMsgRecipient({ id, name:nm }); navigate('chat') }
 
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#F5F5F7', flexDirection:'column', gap:12 }}>
@@ -72,7 +80,7 @@ const [profileRefresh, setProfileRefresh] = useState(0)
   )
 
   const screens = {
-    home:          <HomeScreen         goHandshake={() => navigate('myloans')} goRealTool={goRealTool} navigate={navigate}/>,
+    home:          <HomeScreen         key={homeKey} goHandshake={() => navigate('myloans')} goRealTool={goRealTool} navigate={navigate}/>,
     browse:        <BrowseScreen       goRealTool={goRealTool}/>,
     detail:        tool        ? <DetailScreen      tool={tool}      onBack={goBack} goPhoto={() => navigate('photo')}/> : null,
     realdetail:    realTool    ? <RealDetailScreen  tool={realTool}  onBack={goBack} goMessage={goMessage}/> : null,
@@ -85,7 +93,7 @@ const [profileRefresh, setProfileRefresh] = useState(0)
     messages:      <MessagesScreen     onBack={goBack}/>,
     chat:          <MessagesScreen     initialRecipientId={msgRecipient.id} initialRecipientName={msgRecipient.name} onBack={goBack}/>,
     neighbors:     <NeighborsScreen    goCreateGroup={() => navigate('creategroup')} goJoinGroup={() => navigate('joingroup')} goGroupDetail={goGroupDetail}/>,
-   profile:       <ProfileScreen      goPaywall={() => navigate('paywall')} goNotifications={() => navigate('notifications')} goPrivacy={() => navigate('privacy')} goPayment={() => navigate('payment')} goAccount={() => navigate('account')} refreshKey={profileRefresh}/>,
+    profile:       <ProfileScreen      goPaywall={() => navigate('paywall')} goNotifications={() => navigate('notifications')} goPrivacy={() => navigate('privacy')} goPayment={() => navigate('payment')} goAccount={() => navigate('account')} refreshKey={profileRefresh}/>,
     paywall:       <PaywallScreen      onBack={goBack}/>,
     notifications: <NotificationsScreen onBack={goBack}/>,
     privacy:       <PrivacyScreen      onBack={goBack}/>,
@@ -109,7 +117,9 @@ const [profileRefresh, setProfileRefresh] = useState(0)
             : (screens[screen] || screens.home)
           }
         </div>
-        {session && !FULLSCREEN.includes(screen) && <Nav current={screen} onChange={setScreen}/>}
+        {session && !FULLSCREEN.includes(screen) && (
+          <Nav current={screen} onChange={handleNavChange}/>
+        )}
       </div>
     </div>
   )
