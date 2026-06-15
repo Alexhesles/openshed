@@ -90,6 +90,7 @@ export default function App() {
     if (s === 'messages') setMsgRecipient({ id:null, name:'' })
     setHistory([s]); setScreen(s)
     setTool(null); setRealTool(null); setEditTool(null); setSelGroup(null)
+  }
     // Refresh unread when returning to any tab
     if (session?.user?.id) {
       supabase.from('messages').select('id').eq('to_id', session.user.id).eq('read', false)
