@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Bell, ChevronRight, Plus, Users, TrendingUp, ArrowLeft, Camera, AlertTriangle } from 'lucide-react'
+import { Bell, ChevronRight, Plus, Users, TrendingUp, TrendingDown, ArrowLeft, Camera, AlertTriangle } from 'lucide-react'
 import { C } from '../theme.js'
 import { supabase } from '../lib/supabase.js'
 import { TrustRing, SectionLabel, Row } from '../components/atoms.jsx'
@@ -8,12 +8,12 @@ import { CheckCircle, Bell as BellIcon, Shield as ShieldIcon, Award as AwardIcon
 
 // ── NEIGHBORS ─────────────────────────────────────────────────────────────────
 export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDetail }) {
-  const [sosActive,  setSosActive]  = useState(false)
-  const [sosId,      setSosId]      = useState(null)
-  const [sosAlerts,  setSosAlerts]  = useState([])
-  const [groups,     setGroups]     = useState([])
-  const [userId,     setUserId]     = useState(null)
-  const [userName,   setUserName]   = useState('')
+  const [sosActive, setSosActive] = useState(false)
+  const [sosId,     setSosId]     = useState(null)
+  const [sosAlerts, setSosAlerts] = useState([])
+  const [groups,    setGroups]    = useState([])
+  const [userId,    setUserId]    = useState(null)
+  const [userName,  setUserName]  = useState('')
 
   useEffect(() => {
     const init = async () => {
@@ -21,15 +21,12 @@ export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDet
       setUserId(user.id)
       const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
       setUserName(prof?.full_name || 'Neighbor')
-
       const [{ data: memberships }, { data: alerts }] = await Promise.all([
         supabase.from('group_members').select('group_id, groups(id, name, type, invite_code)').eq('profile_id', user.id),
         supabase.from('sos_alerts').select('*, profiles!sender_id(full_name)').gt('expires_at', new Date().toISOString()),
       ])
       setGroups(memberships?.map(m => m.groups).filter(Boolean) || [])
       setSosAlerts(alerts || [])
-
-      // Check if user already has active SOS
       const myAlert = alerts?.find(a => a.sender_id === user.id)
       if (myAlert) { setSosActive(true); setSosId(myAlert.id) }
     }
@@ -37,11 +34,7 @@ export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDet
   }, [])
 
   const activateSOS = async () => {
-    const { data } = await supabase.from('sos_alerts').insert({
-      sender_id: userId,
-      sender_name: userName,
-      message: 'Emergency tool needed!',
-    }).select().single()
+    const { data } = await supabase.from('sos_alerts').insert({ sender_id:userId, sender_name:userName, message:'Emergency tool needed!' }).select().single()
     if (data) { setSosId(data.id); setSosActive(true) }
   }
 
@@ -61,7 +54,6 @@ export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDet
       </div>
       <div style={{ padding:'14px 14px 0' }}>
 
-        {/* Active SOS from neighbors */}
         {otherAlerts.length > 0 && (
           <div style={{ background:C.redL, borderRadius:16, padding:14, marginBottom:14, border:`1.5px solid ${C.red}44` }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
@@ -69,13 +61,11 @@ export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDet
               <span style={{ fontWeight:800, fontSize:12, color:C.red }}>SOS FROM NEIGHBORS</span>
             </div>
             {otherAlerts.map(alert => (
-              <div key={alert.id} style={{ marginBottom:10 }}>
+              <div key={alert.id} style={{ marginBottom:8 }}>
                 <div style={{ fontSize:13, fontWeight:600, color:C.t1, marginBottom:6 }}>
                   🚨 <b>{alert.sender_name || alert.profiles?.full_name || 'A neighbor'}</b> needs emergency tool help!
                 </div>
-                <div style={{ fontSize:11, color:C.t2, marginBottom:8 }}>
-                  Responding within 1 hour earns <span style={{ fontWeight:700, color:C.orange }}>double Trust Points</span>
-                </div>
+                <div style={{ fontSize:11, color:C.t2, marginBottom:8 }}>Responding within 1 hour earns <span style={{ fontWeight:700, color:C.orange }}>double Trust Points</span></div>
                 <button style={{ width:'100%', background:C.red, border:'none', color:'white', borderRadius:10, padding:'10px 0', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
                   <AlertTriangle size={14}/>I Can Help →
                 </button>
@@ -84,35 +74,25 @@ export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDet
           </div>
         )}
 
-        {/* My SOS */}
         <div style={{ background:sosActive?C.redL:C.card, border:`1.5px solid ${sosActive?C.red:C.brd}`, borderRadius:16, padding:16, marginBottom:14, boxShadow:C.sh }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
-            <div style={{ background:C.red, border:'none', borderRadius:20, padding:'6px 14px', display:'flex', alignItems:'center', gap:6 }}>
+            <div style={{ background:C.red, borderRadius:20, padding:'6px 14px', display:'flex', alignItems:'center', gap:6 }}>
               <BellIcon size={12} color="white" strokeWidth={1.5}/>
               <span style={{ color:'white', fontWeight:800, fontSize:11 }}>EMERGENCY SOS</span>
             </div>
             {sosActive && <span style={{ fontSize:11, fontWeight:600, color:C.red }}>● ACTIVE</span>}
           </div>
-          <div style={{ fontSize:12, color:C.t2, lineHeight:1.6, marginBottom:12 }}>
-            Alert neighbors within 0.5 miles. Responding within 1 hour earns <span style={{ fontWeight:700, color:C.orange }}>double Trust Points</span>.
-          </div>
+          <div style={{ fontSize:12, color:C.t2, lineHeight:1.6, marginBottom:12 }}>Alert neighbors within 0.5 miles. Responding within 1 hour earns <span style={{ fontWeight:700, color:C.orange }}>double Trust Points</span>.</div>
           {!sosActive ? (
-            <button onClick={activateSOS} style={{ background:C.red, color:'white', border:'none', borderRadius:10, padding:'11px 0', width:'100%', fontWeight:700, fontSize:13, cursor:'pointer' }}>
-              Send Emergency Alert
-            </button>
+            <button onClick={activateSOS} style={{ background:C.red, color:'white', border:'none', borderRadius:10, padding:'11px 0', width:'100%', fontWeight:700, fontSize:13, cursor:'pointer' }}>Send Emergency Alert</button>
           ) : (
             <div>
-              <div style={{ fontSize:12, color:C.t2, marginBottom:10 }}>
-                Your alert is live — neighbors can see it and respond. Expires in 4 hours.
-              </div>
-              <button onClick={cancelSOS} style={{ background:'transparent', border:`1.5px solid ${C.red}`, color:C.red, borderRadius:10, padding:'9px 0', width:'100%', fontSize:12, fontWeight:700, cursor:'pointer' }}>
-                Cancel Alert
-              </button>
+              <div style={{ fontSize:12, color:C.t2, marginBottom:10 }}>Your alert is live — neighbors can see it and respond. Expires in 4 hours.</div>
+              <button onClick={cancelSOS} style={{ background:'transparent', border:`1.5px solid ${C.red}`, color:C.red, borderRadius:10, padding:'9px 0', width:'100%', fontSize:12, fontWeight:700, cursor:'pointer' }}>Cancel Alert</button>
             </div>
           )}
         </div>
 
-        {/* Group actions */}
         <div style={{ display:'flex', gap:10, marginBottom:14 }}>
           <button onClick={goCreateGroup} style={{ flex:1, background:C.blue, border:'none', color:'white', borderRadius:12, padding:'11px 0', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, boxShadow:`0 4px 12px ${C.blue}44` }}>
             <Plus size={15}/>Create Group
@@ -163,17 +143,52 @@ export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDet
 export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment, goAccount, refreshKey }) {
   const [profile,      setProfile]      = useState(null)
   const [authUser,     setAuthUser]     = useState(null)
+  const [trustEvents,  setTrustEvents]  = useState([])
   const [uploadingPic, setUploadingPic] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setAuthUser(user)
-      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      setProfile(data)
+  useEffect(() => { loadAll() }, [refreshKey])
+
+  const loadAll = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    setAuthUser(user)
+
+    const [{ data: prof }, { data: lenderLoans }, { data: borrowerLoans }, { data: tools }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase.from('loans').select('status, created_at, tools(name)').eq('lender_id', user.id),
+      supabase.from('loans').select('status, rating, created_at, tools(name)').eq('borrower_id', user.id),
+      supabase.from('tools').select('id, name, created_at').eq('owner_id', user.id),
+    ])
+
+    // Calculate real trust score
+    let score = 10
+    score += 20 // Google identity
+    score += Math.min((tools?.length || 0) * 3, 15)
+    const confirmedLends  = lenderLoans?.filter(l => l.status === 'returned') || []
+    const returnsOnTime   = borrowerLoans?.filter(l => l.status === 'returned') || []
+    const disputed        = borrowerLoans?.filter(l => l.status === 'disputed') || []
+    score += confirmedLends.length  * 5
+    score += returnsOnTime.length   * 5
+    score -= disputed.length        * 10
+    score = Math.min(100, Math.max(0, score))
+
+    // Update score in DB if changed
+    if (prof && prof.trust_score !== score) {
+      await supabase.from('profiles').update({ trust_score: score }).eq('id', user.id)
     }
-    load()
-  }, [refreshKey])
+    setProfile({ ...prof, trust_score: score })
+
+    // Build real trust events
+    const fmt = (d) => new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric'})
+    const events = [
+      { d:'+20', l:'Identity verified · Google', f: fmt(user.created_at), p:true },
+      ...tools?.map(t => ({ d:'+3', l:`Tool listed · ${t.name}`, f:fmt(t.created_at), p:true })) || [],
+      ...confirmedLends.map(l => ({ d:'+5', l:`Loan confirmed · ${l.tools?.name||'Tool'}`, f:fmt(l.created_at), p:true })),
+      ...returnsOnTime.map(l => ({ d:'+5', l:`On-time return · ${l.tools?.name||'Tool'}`, f:fmt(l.created_at), p:true })),
+      ...disputed.map(l => ({ d:'-10', l:`Disputed return · ${l.tools?.name||'Tool'}`, f:fmt(l.created_at), p:false })),
+    ].sort((a, b) => new Date(b.f) - new Date(a.f)).slice(0, 8)
+
+    setTrustEvents(events)
+  }
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0]
@@ -191,15 +206,11 @@ export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment
   }
 
   const handleSignOut = async () => { await supabase.auth.signOut() }
-  const avatar = profile?.avatar_url || authUser?.user_metadata?.avatar_url
-
-  const EVS = [
-    { d:'+5',  l:'On-time return · Orbital Sander',       f:'Jun 8',  p:true  },
-    { d:'+10', l:'Skill Swap hosted · Woodworking',        f:'Jun 5',  p:true  },
-    { d:'+5',  l:'On-time return · Power Drill',           f:'May 29', p:true  },
-    { d:'-5',  l:'Late return (< 24h) · Pressure Washer', f:'May 15', p:false },
-    { d:'+20', l:'Identity verified',                       f:'Apr 10', p:true  },
-  ]
+  const avatar  = profile?.avatar_url || authUser?.user_metadata?.avatar_url
+  const score   = profile?.trust_score || 10
+  const tier    = score >= 71 ? 'Trusted Pro' : score >= 31 ? 'Neighbor' : 'Newcomer'
+  const nextTier= score >= 71 ? 'Community Pillar' : score >= 31 ? 'Trusted Pro' : 'Neighbor'
+  const nextAt  = score >= 71 ? 100 : score >= 31 ? 71 : 31
 
   return (
     <div style={{ flex:1, overflowY:'auto', background:C.bg }}>
@@ -228,7 +239,7 @@ export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment
             </div>
             <div style={{ fontSize:11, color:C.t3, marginTop:2 }}>Tap photo to change</div>
           </div>
-          <TrustRing score={profile?.trust_score||10} size={62} stroke={5}/>
+          <TrustRing score={score} size={62} stroke={5}/>
         </div>
       </div>
 
@@ -242,23 +253,30 @@ export function ProfileScreen({ goPaywall, goNotifications, goPrivacy, goPayment
 
       <SectionLabel>Trust Score</SectionLabel>
       <div style={{ margin:'0 14px', background:C.card, borderRadius:16, padding:16, boxShadow:C.sh, border:`1px solid ${C.brd}` }}>
-        <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:14 }}>
-          <TrustRing score={profile?.trust_score||10} size={80} stroke={6}/>
-          <div>
-            <div style={{ fontWeight:700, fontSize:16, color:C.t1 }}>
-              {(profile?.trust_score||10)>=71?'Trusted Pro':(profile?.trust_score||10)>=31?'Neighbor':'Newcomer'}
+        <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:10 }}>
+          <TrustRing score={score} size={80} stroke={6}/>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:700, fontSize:16, color:C.t1 }}>{tier}</div>
+            <div style={{ fontSize:12, color:C.t2, marginTop:2 }}>{nextAt - score} pts to {nextTier}</div>
+            <div style={{ marginTop:8, height:4, background:C.bg, borderRadius:2, overflow:'hidden' }}>
+              <div style={{ height:'100%', width:`${Math.min((score/nextAt)*100,100)}%`, background:`linear-gradient(90deg,${C.blue},${C.orange})`, borderRadius:2 }}/>
             </div>
-            <div style={{ fontSize:12, color:C.t2, marginTop:2 }}>Keep lending to grow your score</div>
           </div>
         </div>
-        {EVS.map((e, i) => (
-          <div key={i} style={{ display:'flex', alignItems:'center', gap:12, paddingTop:i?10:0, borderTop:i?`1px solid ${C.brd}`:'none' }}>
+
+        {trustEvents.length === 0 ? (
+          <div style={{ textAlign:'center', padding:'12px 0', fontSize:13, color:C.t2 }}>Complete loans to earn Trust Points</div>
+        ) : trustEvents.map((e, i) => (
+          <div key={i} style={{ display:'flex', alignItems:'center', gap:12, paddingTop:i?10:10, borderTop:`1px solid ${C.brd}` }}>
             <div style={{ width:32, height:32, borderRadius:10, background:`${e.p?C.green:C.red}15`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <TrendingUp size={14} color={e.p?C.green:C.red} strokeWidth={1.5}/>
+              {e.p
+                ? <TrendingUp size={14} color={C.green} strokeWidth={1.5}/>
+                : <TrendingDown size={14} color={C.red} strokeWidth={1.5}/>
+              }
             </div>
             <div style={{ flex:1 }}>
               <div style={{ fontSize:12, fontWeight:500, color:C.t1 }}>{e.l}</div>
-              <div style={{ fontSize:10, color:C.t3, marginTop:1 }}>{e.f}</div>
+              {e.f && <div style={{ fontSize:10, color:C.t3, marginTop:1 }}>{e.f}</div>}
             </div>
             <span style={{ fontWeight:800, fontSize:15, color:e.p?C.green:C.red }}>{e.d}</span>
           </div>
