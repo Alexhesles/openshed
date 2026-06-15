@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Bell, ChevronRight, Plus, Users, TrendingUp, ArrowLeft, Camera } from 'lucide-react'
+import { Bell, ChevronRight, Plus, Users, TrendingUp, ArrowLeft, Camera, AlertTriangle } from 'lucide-react'
 import { C } from '../theme.js'
 import { supabase } from '../lib/supabase.js'
 import { TrustRing, SectionLabel, Row } from '../components/atoms.jsx'
@@ -8,19 +8,50 @@ import { CheckCircle, Bell as BellIcon, Shield as ShieldIcon, Award as AwardIcon
 
 // ── NEIGHBORS ─────────────────────────────────────────────────────────────────
 export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDetail }) {
-  const [sos,    setSos]    = useState(false)
-  const [groups, setGroups] = useState([])
+  const [sosActive,  setSosActive]  = useState(false)
+  const [sosId,      setSosId]      = useState(null)
+  const [sosAlerts,  setSosAlerts]  = useState([])
+  const [groups,     setGroups]     = useState([])
+  const [userId,     setUserId]     = useState(null)
+  const [userName,   setUserName]   = useState('')
 
   useEffect(() => {
-    const fetch = async () => {
+    const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      const { data } = await supabase.from('group_members')
-        .select('group_id, groups(id, name, type, invite_code)')
-        .eq('profile_id', user.id)
-      setGroups(data?.map(m => m.groups).filter(Boolean) || [])
+      setUserId(user.id)
+      const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+      setUserName(prof?.full_name || 'Neighbor')
+
+      const [{ data: memberships }, { data: alerts }] = await Promise.all([
+        supabase.from('group_members').select('group_id, groups(id, name, type, invite_code)').eq('profile_id', user.id),
+        supabase.from('sos_alerts').select('*, profiles!sender_id(full_name)').gt('expires_at', new Date().toISOString()),
+      ])
+      setGroups(memberships?.map(m => m.groups).filter(Boolean) || [])
+      setSosAlerts(alerts || [])
+
+      // Check if user already has active SOS
+      const myAlert = alerts?.find(a => a.sender_id === user.id)
+      if (myAlert) { setSosActive(true); setSosId(myAlert.id) }
     }
-    fetch()
+    init()
   }, [])
+
+  const activateSOS = async () => {
+    const { data } = await supabase.from('sos_alerts').insert({
+      sender_id: userId,
+      sender_name: userName,
+      message: 'Emergency tool needed!',
+    }).select().single()
+    if (data) { setSosId(data.id); setSosActive(true) }
+  }
+
+  const cancelSOS = async () => {
+    if (sosId) await supabase.from('sos_alerts').delete().eq('id', sosId)
+    setSosActive(false); setSosId(null)
+    setSosAlerts(a => a.filter(s => s.id !== sosId))
+  }
+
+  const otherAlerts = sosAlerts.filter(a => a.sender_id !== userId)
 
   return (
     <div style={{ flex:1, overflowY:'auto', background:C.bg }}>
@@ -29,31 +60,59 @@ export default function NeighborsScreen({ goCreateGroup, goJoinGroup, goGroupDet
         <div style={{ fontSize:13, color:C.t2, marginTop:2 }}>{groups.length} group{groups.length!==1?'s':''} · Community hub</div>
       </div>
       <div style={{ padding:'14px 14px 0' }}>
-        <div style={{ background:sos?C.redL:C.card, border:`1.5px solid ${sos?C.red:C.brd}`, borderRadius:16, padding:16, marginBottom:14, boxShadow:C.sh }}>
+
+        {/* Active SOS from neighbors */}
+        {otherAlerts.length > 0 && (
+          <div style={{ background:C.redL, borderRadius:16, padding:14, marginBottom:14, border:`1.5px solid ${C.red}44` }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+              <span style={{ width:8, height:8, borderRadius:4, background:C.red, display:'block' }}/>
+              <span style={{ fontWeight:800, fontSize:12, color:C.red }}>SOS FROM NEIGHBORS</span>
+            </div>
+            {otherAlerts.map(alert => (
+              <div key={alert.id} style={{ marginBottom:10 }}>
+                <div style={{ fontSize:13, fontWeight:600, color:C.t1, marginBottom:6 }}>
+                  🚨 <b>{alert.sender_name || alert.profiles?.full_name || 'A neighbor'}</b> needs emergency tool help!
+                </div>
+                <div style={{ fontSize:11, color:C.t2, marginBottom:8 }}>
+                  Responding within 1 hour earns <span style={{ fontWeight:700, color:C.orange }}>double Trust Points</span>
+                </div>
+                <button style={{ width:'100%', background:C.red, border:'none', color:'white', borderRadius:10, padding:'10px 0', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                  <AlertTriangle size={14}/>I Can Help →
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* My SOS */}
+        <div style={{ background:sosActive?C.redL:C.card, border:`1.5px solid ${sosActive?C.red:C.brd}`, borderRadius:16, padding:16, marginBottom:14, boxShadow:C.sh }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
-            <button className="rg tp" style={{ background:C.red, border:'none', borderRadius:20, padding:'6px 14px', display:'flex', alignItems:'center', gap:6 }}>
+            <div style={{ background:C.red, border:'none', borderRadius:20, padding:'6px 14px', display:'flex', alignItems:'center', gap:6 }}>
               <BellIcon size={12} color="white" strokeWidth={1.5}/>
               <span style={{ color:'white', fontWeight:800, fontSize:11 }}>EMERGENCY SOS</span>
-            </button>
-            <span style={{ fontSize:12, color:C.t2 }}>Neighborhood alert</span>
+            </div>
+            {sosActive && <span style={{ fontSize:11, fontWeight:600, color:C.red }}>● ACTIVE</span>}
           </div>
           <div style={{ fontSize:12, color:C.t2, lineHeight:1.6, marginBottom:12 }}>
             Alert neighbors within 0.5 miles. Responding within 1 hour earns <span style={{ fontWeight:700, color:C.orange }}>double Trust Points</span>.
           </div>
-          {!sos ? (
-            <button onClick={() => setSos(true)} style={{ background:C.red, color:'white', border:'none', borderRadius:10, padding:'11px 0', width:'100%', fontWeight:700, fontSize:13, cursor:'pointer' }}>Send Emergency Alert</button>
+          {!sosActive ? (
+            <button onClick={activateSOS} style={{ background:C.red, color:'white', border:'none', borderRadius:10, padding:'11px 0', width:'100%', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+              Send Emergency Alert
+            </button>
           ) : (
             <div>
-              <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:6 }}>
-                <span style={{ width:7, height:7, borderRadius:4, background:C.red, display:'block' }}/>
-                <span style={{ fontWeight:700, fontSize:13, color:C.red }}>ALERT ACTIVE · expires in 3h 42min</span>
+              <div style={{ fontSize:12, color:C.t2, marginBottom:10 }}>
+                Your alert is live — neighbors can see it and respond. Expires in 4 hours.
               </div>
-              <div style={{ fontSize:12, color:C.t2, marginBottom:10 }}>3 neighbors notified</div>
-              <button onClick={() => setSos(false)} style={{ background:'transparent', border:`1.5px solid ${C.red}`, color:C.red, borderRadius:10, padding:'9px 0', width:'100%', fontSize:12, fontWeight:700, cursor:'pointer' }}>Cancel Alert</button>
+              <button onClick={cancelSOS} style={{ background:'transparent', border:`1.5px solid ${C.red}`, color:C.red, borderRadius:10, padding:'9px 0', width:'100%', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                Cancel Alert
+              </button>
             </div>
           )}
         </div>
 
+        {/* Group actions */}
         <div style={{ display:'flex', gap:10, marginBottom:14 }}>
           <button onClick={goCreateGroup} style={{ flex:1, background:C.blue, border:'none', color:'white', borderRadius:12, padding:'11px 0', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, boxShadow:`0 4px 12px ${C.blue}44` }}>
             <Plus size={15}/>Create Group
