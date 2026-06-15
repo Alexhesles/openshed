@@ -5,12 +5,15 @@ import { Wrench, Hammer, Leaf, Zap, Droplets, Clock, CheckCircle, XCircle, Rotat
 
 const CAT_ICONS  = { 'Power Tools':Hammer, 'Yard & Garden':Leaf, 'Cleaning':Droplets, 'Hand Tools':Wrench, 'Other':Zap }
 const CAT_COLORS = { 'Power Tools':'#FF9500', 'Yard & Garden':'#34C759', 'Cleaning':'#007AFF', 'Hand Tools':'#007AFF', 'Other':'#AF52DE' }
+
 const STATUS = {
-  requested: { label:'Pending approval',             color:'#FF9500', bg:'#FFF4E0', Icon:Clock       },
-  approved:  { label:'Approved — Ready to pickup!',  color:'#34C759', bg:'#E8F9ED', Icon:CheckCircle },
-  active:    { label:'Active loan',                  color:'#007AFF', bg:'#EAF3FF', Icon:CheckCircle },
-  returned:  { label:'Returned',                     color:'#8E8E93', bg:'#F2F2F7', Icon:CheckCircle },
-  cancelled: { label:'Declined',                     color:'#FF3B30', bg:'#FFECEB', Icon:XCircle     },
+  requested:      { label:'Pending approval',               color:'#FF9500', bg:'#FFF4E0', Icon:Clock       },
+  approved:       { label:'Approved — Ready to pickup!',    color:'#34C759', bg:'#E8F9ED', Icon:CheckCircle },
+  active:         { label:'Active loan',                    color:'#007AFF', bg:'#EAF3FF', Icon:CheckCircle },
+  return_pending: { label:'Waiting for owner confirmation', color:'#AF52DE', bg:'#F5EEFF', Icon:Clock       },
+  returned:       { label:'Returned ✓',                     color:'#8E8E93', bg:'#F2F2F7', Icon:CheckCircle },
+  cancelled:      { label:'Declined',                       color:'#FF3B30', bg:'#FFECEB', Icon:XCircle     },
+  disputed:       { label:'Disputed',                       color:'#FF3B30', bg:'#FFECEB', Icon:XCircle     },
 }
 const LABELS = ['','Poor','Fair','Good','Great','Excellent!']
 
@@ -49,14 +52,18 @@ export default function MyLoansScreen() {
   const confirmReturn = async () => {
     if (rating === 0) return
     setSubmitting(true)
-    await supabase.from('loans').update({ status:'returned', actual_return_date:new Date().toISOString(), rating }).eq('id', returning.id)
-    await supabase.from('tools').update({ is_available:true }).eq('id', returning.tools?.id)
-    setLoans(prev => prev.map(l => l.id === returning.id ? { ...l, status:'returned', rating } : l))
+    // Set to return_pending — owner must confirm
+    await supabase.from('loans').update({
+      status: 'return_pending',
+      actual_return_date: new Date().toISOString(),
+      rating,
+    }).eq('id', returning.id)
+    setLoans(prev => prev.map(l => l.id === returning.id ? { ...l, status:'return_pending', rating } : l))
     setReturning(null); setRating(0); setSubmitting(false)
   }
 
-  const active  = loans.filter(l => ['requested','approved','active'].includes(l.status))
-  const history = loans.filter(l => ['returned','cancelled'].includes(l.status))
+  const active  = loans.filter(l => ['requested','approved','active','return_pending'].includes(l.status))
+  const history = loans.filter(l => ['returned','cancelled','disputed'].includes(l.status))
   const shown   = tab === 'active' ? active : history
 
   return (
@@ -72,6 +79,9 @@ export default function MyLoansScreen() {
             <div style={{ fontSize:13, fontWeight:600, color:C.orange, textAlign:'center', height:20, marginBottom:16 }}>
               {rating > 0 ? LABELS[rating] : 'Tap a star to rate'}
             </div>
+            <div style={{ background:C.purpleL||'#F5EEFF', borderRadius:10, padding:'10px 12px', marginBottom:14, fontSize:12, color:'#AF52DE', textAlign:'center' }}>
+              The owner will confirm they received the tool
+            </div>
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={() => { setReturning(null); setRating(0) }}
                 style={{ flex:1, background:C.cardAlt, border:`1px solid ${C.brd}`, borderRadius:12, padding:'12px 0', fontWeight:600, fontSize:13, color:C.t1, cursor:'pointer' }}>
@@ -79,7 +89,7 @@ export default function MyLoansScreen() {
               </button>
               <button onClick={confirmReturn} disabled={rating===0||submitting}
                 style={{ flex:1, background:rating>0?C.blue:'#C7C7CC', border:'none', borderRadius:12, padding:'12px 0', fontWeight:700, fontSize:13, color:'white', cursor:rating>0?'pointer':'not-allowed' }}>
-                {submitting ? 'Submitting...' : 'Confirm Return'}
+                {submitting ? 'Sending...' : 'Mark Returned'}
               </button>
             </div>
           </div>
@@ -132,6 +142,7 @@ export default function MyLoansScreen() {
                   {tool?.is_free ? 'Free' : `$${tool?.price_per_day}/day`}
                 </div>
               </div>
+
               <div style={{ margin:'0 14px', background:st.bg, borderRadius:10, padding:'10px 12px', display:'flex', alignItems:'center', gap:8, border:`1px solid ${st.color}33` }}>
                 <st.Icon size={15} color={st.color} strokeWidth={1.5}/>
                 <div style={{ flex:1 }}>
@@ -144,6 +155,7 @@ export default function MyLoansScreen() {
                   </div>
                 )}
               </div>
+
               {canReturn && (
                 <div style={{ padding:'12px 14px' }}>
                   <button onClick={() => setReturning(loan)}
