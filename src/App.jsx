@@ -76,7 +76,7 @@ export default function App() {
     setHistory(h => {
       const prev = h.length > 1 ? h[h.length - 2] : 'home'
       if (screen === 'account') setProfileRefresh(r => r + 1)
-      if (screen === 'messages' || screen === 'chat') setUnreadMsgs(0)
+      if (s === 'messages' || s === 'chat') setUnreadMsgs(0)
       if (prev === 'home') setHomeKey(k => k + 1)
       setScreen(prev)
       setTool(null); setRealTool(null); setEditTool(null); setSelGroup(null)
@@ -85,7 +85,7 @@ export default function App() {
   }
 
   const handleNavChange = (s) => {
-    if (screen === 'messages' || screen === 'chat') setUnreadMsgs(0)
+    if (s === 'messages' || s === 'chat') setUnreadMsgs(0)
     if (s === 'home') setHomeKey(k => k + 1)
     if (s === 'messages') setMsgRecipient({ id:null, name:'' })
     setHistory([s]); setScreen(s)
