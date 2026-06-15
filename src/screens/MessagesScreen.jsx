@@ -10,10 +10,15 @@ function InboxView({ currentUserId, onOpenChat }) {
 
   useEffect(() => {
     if (!currentUserId) return
-    fetchConvs()
-    // Mark ALL unread as read when inbox is opened
-    supabase.from('messages').update({ read: true })
-      .eq('to_id', currentUserId).eq('read', false)
+    const init = async () => {
+      // ✅ await so the HTTP request actually fires
+      await supabase.from('messages')
+        .update({ read: true })
+        .eq('to_id', currentUserId)
+        .eq('read', false)
+      await fetchConvs()
+    }
+    init()
   }, [currentUserId])
 
   const fetchConvs = async () => {
@@ -75,10 +80,16 @@ function ChatView({ partnerId, partnerName, currentUserId, onBack }) {
 
   useEffect(() => {
     if (!partnerId || !currentUserId) return
-    fetchMsgs()
-    // Mark messages from this partner as read
-    supabase.from('messages').update({ read: true })
-      .eq('to_id', currentUserId).eq('from_id', partnerId).eq('read', false)
+    const init = async () => {
+      // ✅ await so the HTTP request actually fires
+      await supabase.from('messages')
+        .update({ read: true })
+        .eq('to_id', currentUserId)
+        .eq('from_id', partnerId)
+        .eq('read', false)
+      await fetchMsgs()
+    }
+    init()
   }, [partnerId, currentUserId])
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior:'smooth' }) }, [msgs])
