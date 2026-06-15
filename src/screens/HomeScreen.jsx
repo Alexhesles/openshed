@@ -8,18 +8,21 @@ import { Wrench, Hammer, Leaf, Zap, Droplets } from 'lucide-react'
 const CAT_ICONS  = { 'Power Tools':Hammer, 'Yard & Garden':Leaf, 'Cleaning':Droplets, 'Hand Tools':Wrench, 'Other':Zap }
 const CAT_COLORS = { 'Power Tools':'#FF9500', 'Yard & Garden':'#34C759', 'Cleaning':'#007AFF', 'Hand Tools':'#007AFF', 'Other':'#AF52DE' }
 
-export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
+export default function HomeScreen({ goHandshake, goRealTool, navigate, unreadMsgs: unreadProp }) {
   const [profile,         setProfile]         = useState(null)
   const [tools,           setTools]           = useState([])
   const [activeLoans,     setActiveLoans]     = useState([])
   const [pendingRequests, setPendingRequests] = useState([])
   const [pendingReturns,  setPendingReturns]  = useState([])
   const [sosAlerts,       setSosAlerts]       = useState([])
-  const [unreadMsgs,      setUnreadMsgs]      = useState(0)
+  const [unreadMsgs,      setUnreadMsgs]      = useState(unreadProp || 0)
   const [pendingOpen,     setPendingOpen]     = useState(false)
   const [loading,         setLoading]         = useState(true)
 
   useEffect(() => { loadData() }, [])
+
+  // Sync unread badge from App when prop changes (e.g. cleared after reading)
+  useEffect(() => { setUnreadMsgs(unreadProp || 0) }, [unreadProp])
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -36,7 +39,7 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
     setProfile(prof)
     setTools(toolsData || [])
     setActiveLoans(loansData || [])
-    setUnreadMsgs(unread?.length || 0)
+    setUnreadMsgs(unreadProp !== undefined ? unreadProp : (unread?.length || 0))
     setSosAlerts(sos || [])
 
     if (myTools?.length > 0) {
@@ -115,12 +118,9 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
             <div style={{ fontWeight:700, fontSize:14, color:C.t1 }}>Notifications</div>
             <X size={16} color={C.t3} onClick={() => setPendingOpen(false)} style={{ cursor:'pointer' }}/>
           </div>
-
           {totalBell === 0 && (
             <div style={{ padding:'20px 14px', textAlign:'center', fontSize:13, color:C.t2 }}>No pending notifications</div>
           )}
-
-          {/* Loan requests */}
           {pendingRequests.map(r => (
             <div key={r.id} style={{ padding:'12px 14px', borderBottom:`1px solid ${C.brd}` }}>
               <div style={{ fontSize:12, fontWeight:700, color:C.orange, marginBottom:4, textTransform:'uppercase', letterSpacing:'0.5px' }}>Borrow Request</div>
@@ -128,32 +128,22 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
                 <b>{r.profiles?.full_name || 'Someone'}</b> wants to borrow <b>{r.tools?.name}</b>
               </div>
               <div style={{ display:'flex', gap:8 }}>
-                <button onClick={() => approveRequest(r.id)}
-                  style={{ flex:1, background:C.green, border:'none', color:'white', borderRadius:10, padding:'9px 0', fontWeight:700, fontSize:13, cursor:'pointer' }}>
-                  Approve ✓
-                </button>
-                <button onClick={() => declineRequest(r.id)}
-                  style={{ flex:1, background:C.redL, border:`1px solid ${C.red}33`, color:C.red, borderRadius:10, padding:'9px 0', fontWeight:700, fontSize:13, cursor:'pointer' }}>
-                  Decline
-                </button>
+                <button onClick={() => approveRequest(r.id)} style={{ flex:1, background:C.green, border:'none', color:'white', borderRadius:10, padding:'9px 0', fontWeight:700, fontSize:13, cursor:'pointer' }}>Approve ✓</button>
+                <button onClick={() => declineRequest(r.id)} style={{ flex:1, background:C.redL, border:`1px solid ${C.red}33`, color:C.red, borderRadius:10, padding:'9px 0', fontWeight:700, fontSize:13, cursor:'pointer' }}>Decline</button>
               </div>
             </div>
           ))}
-
-          {/* Pending returns — owner confirms */}
           {pendingReturns.map(r => (
             <div key={r.id} style={{ padding:'12px 14px', borderBottom:`1px solid ${C.brd}` }}>
               <div style={{ fontSize:12, fontWeight:700, color:'#AF52DE', marginBottom:4, textTransform:'uppercase', letterSpacing:'0.5px' }}>Tool Returned</div>
               <div style={{ fontSize:13, fontWeight:600, color:C.t1, marginBottom:10 }}>
-                <b>{r.profiles?.full_name || 'Borrower'}</b> says they returned <b>{r.tools?.name}</b>. Did you receive it?
+                <b>{r.profiles?.full_name || 'Borrower'}</b> returned <b>{r.tools?.name}</b>. Did you receive it?
               </div>
               <div style={{ display:'flex', gap:8 }}>
-                <button onClick={() => confirmReturn(r)}
-                  style={{ flex:1, background:C.green, border:'none', color:'white', borderRadius:10, padding:'9px 0', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                <button onClick={() => confirmReturn(r)} style={{ flex:1, background:C.green, border:'none', color:'white', borderRadius:10, padding:'9px 0', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
                   <CheckCircle size={13}/>Yes, received
                 </button>
-                <button onClick={() => disputeReturn(r.id)}
-                  style={{ flex:1, background:C.redL, border:`1px solid ${C.red}33`, color:C.red, borderRadius:10, padding:'9px 0', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                <button onClick={() => disputeReturn(r.id)} style={{ flex:1, background:C.redL, border:`1px solid ${C.red}33`, color:C.red, borderRadius:10, padding:'9px 0', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
                   <AlertTriangle size={13}/>Dispute
                 </button>
               </div>
@@ -174,8 +164,7 @@ export default function HomeScreen({ goHandshake, goRealTool, navigate }) {
               <div style={{ fontSize:13, color:C.t1, marginBottom:8 }}>
                 <b>{alert.profiles?.full_name || 'A neighbor'}</b> needs emergency tool help nearby
               </div>
-              <button onClick={() => navigate('neighbors')}
-                style={{ width:'100%', background:C.red, border:'none', color:'white', borderRadius:10, padding:'10px 0', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+              <button onClick={() => navigate('neighbors')} style={{ width:'100%', background:C.red, border:'none', color:'white', borderRadius:10, padding:'10px 0', fontWeight:700, fontSize:13, cursor:'pointer' }}>
                 Respond to SOS →
               </button>
             </div>
